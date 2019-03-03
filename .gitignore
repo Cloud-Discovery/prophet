@@ -1,0 +1,13 @@
+*.pyc
+*.pyo
+*.swp
+*.swo
+*.db
+.tox
+.eggs/*
+*.egg-info
+.venv
+build/*
+log/*
+.vscode/*
+celerybeat-schedule

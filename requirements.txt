@@ -1,0 +1,13 @@
+# Flask
+Flask
+Flask-RESTful
+Flask-Script
+Flask-Babel
+
+# json schema validation
+jsonschema
+gevent
+requests
+pyyaml
+
+pyvmomi
