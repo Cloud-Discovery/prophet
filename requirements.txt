@@ -11,3 +11,5 @@ requests
 pyyaml
 
 pyvmomi
+ansible
+paramiko

@@ -1,0 +1,6 @@
+CHANGES
+=======
+
+* Add get vmware and linux host modules in this project
+* Add cli interface in this project
+* Initial commit for prophet

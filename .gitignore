@@ -6,7 +6,7 @@
 .tox
 .eggs/*
 *.egg-info
-.venv
+.venv/*
 build/*
 log/*
 .vscode/*

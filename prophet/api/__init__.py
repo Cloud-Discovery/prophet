@@ -16,8 +16,8 @@ from flask import jsonify, request
 from flask_babel import gettext as _
 from werkzeug.exceptions import NotFound
 
-from mass import app, babel
-from mass import exception
+from prophet import app, babel
+from prophet import exception
 
 
 @babel.localeselector
@@ -63,7 +63,7 @@ def handle_errors(e):
         # Handle all errors defined in exceptions, return unkown error
         # when not defined
         exception_classes = inspect.getmembers(
-                sys.modules["mass.exception"], inspect.isclass)
+                sys.modules["prophet.exception"], inspect.isclass)
         for name, obj in exception_classes:
             if type(e) is obj:
                 logging.info("Handle excpetion "

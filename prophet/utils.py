@@ -24,7 +24,7 @@ import subprocess
 import time
 from datetime import datetime
 
-from mass import app
+from prophet import app
 
 from flask import jsonify, make_response
 from flask_babel import gettext as _
@@ -367,7 +367,6 @@ def mkdir_p(path):
             pass
         else:
             raise
-
 
 def load_configs(config_file):
     """Load configuration by orders"""
