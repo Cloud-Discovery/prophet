@@ -47,7 +47,7 @@ def main():
     argv = sys.argv
     # Read options argv
     options = parse_args(argv)
-    #utils.load_configs(options.config)
+    # utils.load_configs(options.config)
 
     # setup logging
     debug = options.debug

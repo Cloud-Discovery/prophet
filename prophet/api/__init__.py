@@ -36,9 +36,9 @@ def get_locale():
 def register_api(app):
     """Register function all routes"""
     pass
-    #app.register_blueprint(user.user_bp)
-    #app.register_blueprint(setup_step.setup_step_bp,
-    #                       url_prefix="/hypermotion/v1")
+    # app.register_blueprint(user.user_bp)
+    # app.register_blueprint(setup_step.setup_step_bp,
+    #                        url_prefix="/hypermotion/v1")
 
 
 def _make_error(err):

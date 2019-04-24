@@ -25,6 +25,7 @@ import atexit
 import logging
 import os
 import sys
+import uuid
 import telnetlib
 
 from pyVim import connect
@@ -165,26 +166,84 @@ class VMwareHostController(object):
 
     def _get_disk_info(self, vm):
         disk_info = {}
-        logging.info("Start get %s vm info." % vm)
+        vdisk_types = [
+            vim.VirtualDiskFlatVer1BackingInfo,
+            vim.VirtualDiskFlatVer2BackingInfo,
+            vim.VirtualDiskSparseVer1BackingInfo,
+            vim.VirtualDiskSparseVer2BackingInfo,
+            vim.VirtualDiskRawDiskMappingVer1BackingInfo,
+        ]
+        logging.info("Start get %s vm disk info." % vm.config.name)
         for dev in vm.config.hardware.device:
             if not isinstance(dev, vim.VirtualDisk):
                 continue
             back_info = dev.backing
             if not isinstance(back_info, vim.VirtualDeviceFileBackingInfo):
                 result = "non-file backing virtual disk exists"
-                logging.info(result)
-            disk_info["fileName"] = dev.backing.fileName
-            disk_info["diskMode"] = dev.backing.diskMode
-            disk_info["thinProvisioned"] = dev.backing.thinProvisioned
-            disk_info["uuid"] = dev.backing.uuid
-            disk_info["contentId"] = dev.backing.contentId
-            disk_info["changeId"] = dev.backing.changeId
-            disk_info["deltaDiskFormat"] = dev.backing.deltaDiskFormat
+                logging.warning(result)
+                disk_info["backing"] = result
+                continue
+            if not any(map(lambda ty: isinstance(back_info, ty),
+                           vdisk_types)):
+                result = ("Contain unsuported backing type: "
+                          "%s" % back_info.__name__)
+                disk_info["backing"] = result
+                continue
+            diskuuid = dev.backing.uuid
+            disk_info[diskuuid] = {}
+            disk_info[diskuuid]["capacityInKB"] = \
+                dev.capacityInKB
+            disk_info[diskuuid]["fileName"] = \
+                dev.backing.fileName
+            disk_info[diskuuid]["diskMode"] = \
+                dev.backing.diskMode
+            disk_info[diskuuid]["thinProvisioned"] = \
+                dev.backing.thinProvisioned
+            disk_info[diskuuid]["contentId"] = \
+                dev.backing.contentId
+            disk_info[diskuuid]["changeId"] = \
+                dev.backing.changeId
+            disk_info[diskuuid]["deltaDiskFormat"] = \
+                dev.backing.deltaDiskFormat
             logging.debug("Get %s vm disk %s info." % (
-                    vm.config.name, disk_info))
+                vm.config.name, disk_info))
+
         logging.info("Get %s vm all disks info successful." % vm.config.name)
 
         return disk_info
+
+    def _get_network_info(self, vm):
+        network_info = {}
+        logging.info("Start get %s network info." % vm.config.name)
+        for dev in vm.config.hardware.device:
+            if isinstance(dev, vim.VirtualE1000) or \
+                    isinstance(dev, vim.VirtualE1000e) or \
+                    isinstance(dev, vim.VirtualVmxnet3) or \
+                    isinstance(dev, vim.VirtualVmxnet2):
+                back_info = dev.backing
+                nt_uuid = uuid.uuid1().hex
+                if not isinstance(back_info,
+                                  vim.VirtualEthernetCard.NetworkBackingInfo):
+                    result = "non-network backing virtual network exists"
+                    logging.warning(result)
+                    network_info[nt_uuid]["backing"] = result
+                    continue
+                nt = dev.backing.network
+                network_info[nt_uuid] = {}
+                network_info[nt_uuid]["macAddress"] = \
+                    dev.macAddress
+                network_info[nt_uuid]["accessible"] = \
+                    nt.summary.accessible
+                network_info[nt_uuid]["deviceName"] = \
+                    nt.summary.name
+                logging.debug("Get %s vm network %s info." % (
+                    vm.config.name, network_info))
+            else:
+                continue
+
+        logging.info("Get %s vm all nets info successful." % vm.config.name)
+
+        return network_info
 
     def _get_vms_info(self):
         esxi_obj = self._get_content_obj(self._content, [vim.HostSystem])
@@ -223,6 +282,8 @@ class VMwareHostController(object):
                 self._vms_info[vmid][
                     "version"] = vm.config.version
                 self._vms_info[vmid][
+                    "firmware"] = vm.config.firmware
+                self._vms_info[vmid][
                     "vmPathName"] = vm.config.files.vmPathName
                 self._vms_info[vmid][
                     "toolsStatus"] = vm.summary.guest.toolsStatus
@@ -241,25 +302,14 @@ class VMwareHostController(object):
                 self._vms_info[vmid][
                     "changeTrackingSupported"] = \
                     vm.capability.changeTrackingSupported
-
-                logging.info("Start get %s vm network info." % vm.config.name)
-                for nt in vm.network:
-                    self._vms_info[vmid]["network"] = {}
-                    self._vms_info[vmid][
-                        "network"]["name"] = nt.summary.name
-                    self._vms_info[vmid][
-                        "network"]["accessible"] = nt.summary.accessible
-                    logging.debug("Start get %s vm network info %s." %
-                                  (vm.config.name,
-                                   self._vms_info[vmid]["network"]))
-                logging.info("Get %s vm network successful." % vm.config.name)
-
+                networks_info = self._get_network_info(vm)
+                self._vms_info[vmid]["network"] = networks_info
                 for dsurl in vm.config.datastoreUrl:
-                    self._vms_info[vmid]["datastoreurl"] = {}
+                    datastore_name = dsurl.name
                     self._vms_info[vmid][
-                        "datastoreurl"]["url"] = dsurl.url
+                        "datastoreurl"] = {datastore_name: {}}
                     self._vms_info[vmid][
-                        "datastoreurl"]["name"] = dsurl.name
+                        "datastoreurl"][datastore_name]["url"] = dsurl.url
                     logging.debug("Get %s esxi vm info %s." % (
                         esxi_host, self._vms_info[vmid]["datastoreurl"]))
                 disks_info = self._get_disk_info(vm)

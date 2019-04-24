@@ -368,6 +368,7 @@ def mkdir_p(path):
         else:
             raise
 
+
 def load_configs(config_file):
     """Load configuration by orders"""
 

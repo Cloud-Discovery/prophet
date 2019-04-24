@@ -1,6 +1,9 @@
 CHANGES
 =======
 
+* Fixed Unable to obtain virtual machine Mac and disk capacity
 * Add get vmware and linux host modules in this project
+* Collect VMware and physical machine infomations
+* Fix pepe8 not check
 * Add cli interface in this project
 * Initial commit for prophet
