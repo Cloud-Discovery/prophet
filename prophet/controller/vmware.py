@@ -27,12 +27,13 @@ import os
 import sys
 import uuid
 import telnetlib
+import yaml
 
 from pyVim import connect
 from pyVmomi import vmodl
 from pyVmomi import vim
 
-from config_file import ConfigFile
+from config_file import ConfigFile, CsvDataFile
 
 
 class VMwareHostController(object):
@@ -324,7 +325,8 @@ class VMwareHostController(object):
             self._vms_info = {}
 
     def _write_file_yaml(self, data_path, filename, values, filetype="yaml"):
-        yamlfile = os.path.join(data_path, filename + "." + filetype)
+        yamlfile = os.path.join(data_path, filename +
+                                "_vmware" + "." + filetype)
         config = ConfigFile(yamlfile)
         logging.info("Write %s info to %s yaml file..." % (
             filename,
@@ -460,3 +462,143 @@ class VMwareHostController(object):
                            self._esxis_info[esxi.name]["datastore"]))
         logging.info("Get %s esxi host datastore info successful." %
                      esxi.name)
+
+
+class VMwareHostReport(object):
+
+    def __init__(self, input_path, output_path, vmware_file):
+        self.vmware_file = vmware_file
+        self.input_path = input_path
+        self.output_path = output_path
+
+    def get_report(self):
+        for i in self.vmware_file:
+            self.data = self._get_data_info(i)
+            self.hostname = self._get_hostname(self.data)
+            self.version = self._get_version(self.data)
+            self.cpu_num = self._get_cpu_num(self.data)
+            self.tol_mem = self._get_total_mem(self.data)
+            self.macaddr = self._get_macaddr(self.data)
+            self.volume_info = self._get_volume_info(self.data)
+            self.boot_type = self._get_boot_type(self.data)
+            self.migration_check = self._migration_check(self.boot_type)
+            self._yaml_to_csv(i, self.hostname, self.version,
+                              self.cpu_num, self.tol_mem, self.macaddr,
+                              self.volume_info, self.boot_type,
+                              self.migration_check)
+
+    def _get_data_info(self, i):
+        file_path = os.path.join(self.input_path, i)
+        logging.info("Opening %s....." % i)
+        with open(file_path) as host_info:
+            data = yaml.load(host_info)
+        logging.info("Geting designated data.....")
+        return data
+
+    def _yaml_to_csv(self, i, hostname, version,
+                     cpu_num, tol_mem, macaddr, volume_info,
+                     boot_type, migration_check):
+        host_data = [
+                {'host_type': 'VMware',
+                 'hostname': self.hostname.decode('utf-8').encode('gbk'),
+                 'address': 'Null',
+                 'version': self.version.decode('utf-8').encode('gbk'),
+                 'cpu_num': self.cpu_num,
+                 'tol_mem(G)': self.tol_mem,
+                 'macaddr': self.macaddr,
+                 'disk_info': self.volume_info,
+                 'boot_type': self.boot_type,
+                 'support_synchronization': self.migration_check[0],
+                 'support_increment': self.migration_check[1],
+                 'migration_proposal': self.migration_check[2]}
+                ]
+        logging.info("Writing migration proposal.....")
+        file_name = 'analysis' + '.csv'
+        output_file = os.path.join(self.output_path, file_name)
+        csv_config = CsvDataFile(host_data, output_file)
+        csv_config.write_data_to_csv()
+        logging.info("%s migration proposal completed" % i)
+
+    def _get_hostname(self, data):
+        logging.info("Analysising host name...")
+        hostname = self.data.values()[0]['name']
+        return hostname
+
+    def _get_version(self, data):
+        logging.info("Analysising host version...")
+        versions = self.data.values()[0]['guestFullName']
+        return versions
+
+    def _get_cpu_num(self, data):
+        logging.info("Analysising cpu cores...")
+        cpu_num = str(self.data.values()[0]['numCpu'])
+        return cpu_num
+
+    def _get_total_mem(self, data):
+        logging.info("Analysising memory...")
+        host_tolal_mem = str(self.data.values()[0]['memoryMB'] / 1024)
+        return host_tolal_mem
+
+    def _get_macaddr(self, data):
+        host_macaddr = []
+        logging.info("Analysising ip macaddr...")
+        for i in range(len(self.data.values()[0]['network'].values())):
+            one_mac = (self.data.values()[0]['network'].values()[i]
+                       ['macAddress'])
+            host_macaddr.append(one_mac)
+        return host_macaddr
+
+    def _get_volume_info(self, data):
+        logging.info("Analysising volume info...")
+        volume_info = {}
+        for i in range(len(self.data.values()[0]['disks_info'].values())):
+            disk_size = str(self.data.values()[0]['disks_info'].values()[i]
+                            ['capacityInKB'] / 1024 / 1024)
+            disk_name = (self.data.values()[0]['disks_info'].values()[i]
+                         ['fileName'])
+            volume_info['disk_name:%s' % disk_name] = [
+                    'disk_size:%s' % disk_size
+                    ]
+        return volume_info
+
+    def _get_boot_type(self, data):
+        logging.info("Analysising boot mode...")
+        boot_type = self.data.values()[0]['firmware']
+        return boot_type
+
+    def _migration_check(self, boot_type):
+        logging.info("Geted host data successful.")
+        logging.info("Checking host data.....")
+        support_synchronization = 'Yes'
+        support_increment = 'Yes'
+        migration_proposal = ''
+        if 'efi' in self.boot_type:
+            support_synchronization = 'No'
+            support_increment = 'No'
+            migration_proposal = ('Boot type:EFI, cloud not supported, '
+                                  'so migrate to the cloud start system '
+                                  'failed, need fix boot type is BIOS.')
+        for i in range(len(self.data.values()[0]['disks_info'].values())):
+            disk_mode = (self.data.values()[0]['disks_info'].values()[i]
+                         ['diskMode'])
+            if "independent_persistent" == disk_mode:
+                support_synchronization = 'No'
+                support_increment = 'No'
+                migration_proposal = (migration_proposal +
+                                      'Disk is independent mode, cloud '
+                                      'not support migrate')
+        if int(self.data.values()[0]['version'].split('-')[1]) < 7:
+            support_increment = 'No'
+            migration_proposal = (migration_proposal +
+                                  'VM version <7, not support CBT, '
+                                  'cannot support incremental backup.')
+        if not self.data.values()[0]['changeTrackingSupported']:
+            support_increment = 'No'
+            migration_proposal = (migration_proposal +
+                                  'VM not support CBT.')
+        if migration_proposal.strip() == '':
+            migration_proposal = 'Check successful'
+            logging.info("Host data check completed.")
+        return (support_synchronization,
+                support_increment,
+                migration_proposal)

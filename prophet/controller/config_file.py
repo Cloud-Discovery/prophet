@@ -10,6 +10,7 @@
 
 """Use yaml as config file"""
 
+import csv
 import logging
 import os
 import yaml
@@ -51,3 +52,37 @@ class ConfigFile(object):
         data_values = json.loads(json_datas)
         with open(self.config_file, "w") as yamlfile:
             yaml.safe_dump(data_values, yamlfile, default_flow_style=False)
+
+
+class CsvDataFile(object):
+
+    def __init__(self, host_data, output_file):
+        self.host_data = host_data
+        self.output_file = output_file
+
+    def write_data_to_csv(self):
+        header = [
+                'host_type',
+                'hostname',
+                'address',
+                'macaddr',
+                'version',
+                'cpu_num',
+                'tol_mem(G)',
+                'disk_info',
+                'boot_type',
+                'support_synchronization',
+                'support_increment',
+                'migration_proposal'
+                ]
+        with open(self.output_file, 'ab+') as f:
+            writer = csv.DictWriter(f, header)
+            with open(self.output_file, 'ab+') as f:
+                reader = csv.reader(f)
+                if not [head_data for head_data in reader]:
+                    writer.writeheader()
+                    for row in self.host_data:
+                        writer.writerow(row)
+                else:
+                    for row in self.host_data:
+                        writer.writerow(row)

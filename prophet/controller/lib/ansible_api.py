@@ -22,7 +22,6 @@ import json
 import logging
 import os
 import shutil
-import time
 import yaml
 
 from ansible.parsing.dataloader import DataLoader
@@ -104,7 +103,7 @@ class AnsibleApi(object):
         self.variable_manager = VariableManager(loader=self.loader,
                                                 inventory=self.inventory)
 
-    def runansible(self, host_list, task_list, info_path):
+    def runansible(self, host_list, task_list):
 
         play_source = dict(
             name="Ansible Play",
@@ -152,26 +151,4 @@ class AnsibleApi(object):
         data_loads = json.loads(data_dumps)
         info = yaml.safe_dump(data_loads, default_flow_style=False)
         logging.info("Host %s info format conversion succeed" % host_list)
-
-        # get time stamp
-        run_time = time.strftime("%Y%m%d%H%M%S",
-                                 time.localtime(time.time()))
-
-        # output file name
-        host_info_file_name = host_list + '_' + run_time + '.yaml'
-
-        # output file path
-        file_path = os.path.join(os.path.dirname(info_path),
-                                 host_info_file_name)
-
-        try:
-            logging.info("Writing host %s info to "
-                         "%s......." % (host_list, file_path))
-            with open(file_path, 'w') as f:
-                f.write(info)
-                logging.info("Write host %s info to %s "
-                             "succeed" % (host_list, file_path))
-        except IOError as err:
-            logging.error("Input save_file_info_path %s "
-                          "not found, please check" % info_path)
-            raise err
+        return info
