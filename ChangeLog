@@ -1,6 +1,9 @@
 CHANGES
 =======
 
+* Fixed get some vmware host suffix such as VCenter && Esxi host
+* Add linux\windows host analysis report and windows information collection
+* Fixed Unable to get mac address and disk capacity of virtual machine
 * Fixed Unable to obtain virtual machine Mac and disk capacity
 * Add get vmware and linux host modules in this project
 * Collect VMware and physical machine infomations

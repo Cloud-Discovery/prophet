@@ -153,16 +153,28 @@ class VMwareHostController(object):
             return -1
 
     def get_all_info(self):
-        self._get_vcenter_info()
-        self._get_esxi_info()
-        self._vc_info[self.host]["esxi"] = self._esxis_info
+        if self._content.about.name == "VMware vCenter Server":
+            self._get_vcenter_info()
+            server_type = "_vcenter"
+            self._get_esxi_info()
+            self._vc_info[self.host]["esxi"] = self._esxis_info
+            self._write_file_yaml(self._data_path,
+                                  self.host,
+                                  self._vc_info,
+                                  suffix=server_type)
+        else:
+            server_type = "_exsi"
+            self._get_esxi_info()
+            self._write_file_yaml(self._data_path,
+                                  self.host,
+                                  self._esxis_info,
+                                  suffix=server_type)
+
         self._write_file_yaml(self._data_path,
                               "host",
                               self._connect_info,
+                              suffix=server_type,
                               filetype="cfg")
-        self._write_file_yaml(self._data_path,
-                              self.host,
-                              self._vc_info)
         self._get_vms_info()
 
     def _get_disk_info(self, vm):
@@ -324,9 +336,10 @@ class VMwareHostController(object):
                                   self._vms_info)
             self._vms_info = {}
 
-    def _write_file_yaml(self, data_path, filename, values, filetype="yaml"):
-        yamlfile = os.path.join(data_path, filename +
-                                "_vmware" + "." + filetype)
+    def _write_file_yaml(self, data_path, filename, values, suffix="_vmware",
+                         filetype="yaml"):
+        yamlfile = os.path.join(data_path, filename + suffix +
+                                "." + filetype)
         config = ConfigFile(yamlfile)
         logging.info("Write %s info to %s yaml file..." % (
             filename,
