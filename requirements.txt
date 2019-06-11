@@ -10,6 +10,7 @@ gevent
 requests
 pyyaml
 
-pyvmomi
 ansible
+pyvmomi
+paramiko
 wmic

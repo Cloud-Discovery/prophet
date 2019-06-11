@@ -22,7 +22,7 @@
 
 import logging
 import os
-import time
+# import time
 import yaml
 
 import paramiko
@@ -144,10 +144,11 @@ class LinuxHostController(object):
 
     def _save_data_info(self, data_info):
         # save host data info to yaml
-        run_time = time.strftime("%Y%m%d%H%M%S",
-                                 time.localtime(time.time()))
-        host_info_file_name = (self.ip + '_' + run_time +
-                               '_linux' + '.yaml')
+        # run_time = time.strftime("%Y%m%d%H%M%S",
+        #                         time.localtime(time.time()))
+        # host_info_file_name = (self.ip + '_' + run_time +
+        #                       '_linux' + '.yaml')
+        host_info_file_name = (self.ip + '_linux' + '.yaml')
         file_path = os.path.join(os.path.dirname(self.data_path),
                                  host_info_file_name)
         try:
@@ -157,6 +158,12 @@ class LinuxHostController(object):
                 f.write(self.data_info)
                 logging.info("Write host %s info to %s "
                              "succeed" % (self.ip, file_path))
+            logging.info("Checking %s data info" % file_path)
+            with open(file_path) as host_info:
+                data = yaml.load(host_info)
+            if not data['success']:
+                raise Exception("Check %s data info failed, please "
+                                "check the file information" % file_path)
         except IOError as err:
             logging.error("Input save_file_info_path %s "
                           "not found, please check" % self.data_path)

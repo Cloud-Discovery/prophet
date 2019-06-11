@@ -10,11 +10,13 @@
 # Copyright (c) 2019 This file is confidential and proprietary.
 # All Rights Resrved, Prophet Tech (Shanghai) Ltd (http://www.prophetech.cn).
 
+import csv
 import glob
 import logging
 import os
 
 from flask_script import Manager
+from itertools import islice
 
 from prophet import app
 from prophet import utils
@@ -48,6 +50,10 @@ manager.add_command("vmware_host", vmware_host_manager)
 # Load host report management command
 host_report_manager = Manager(app, usage="Host report management")
 manager.add_command("host_report", host_report_manager)
+
+# Import hosts info file management command
+import_file_manager = Manager(app, usage="Import hosts info file management")
+manager.add_command("import_file", import_file_manager)
 
 
 @linux_host_manager.option("-i",
@@ -183,6 +189,54 @@ def create_host_report(input_path, output_path):
                                                    all_files)
             run_analysis.get_report()
     logging.info("Host report completed.")
+
+
+@import_file_manager.option("-i",
+                            "--input_path",
+                            dest="input_path",
+                            default=None,
+                            required=True,
+                            help="Input hosts info file path")
+@import_file_manager.option("-o",
+                            "--output_path",
+                            dest="data_path",
+                            default=None,
+                            required=True,
+                            help="Output info File Path")
+def import_file(input_path, data_path):
+    logging.info("Checking input_path:%s......" % input_path)
+    if not os.path.exists(input_path):
+        raise OSError("Input path %s is not exists." % input_path)
+
+    if not os.path.exists(data_path):
+        raise OSError("Output path %s is not exists." % data_path)
+
+    with open(input_path) as f:
+        reader = csv.reader(f)
+        for line in islice(reader, 1, None):
+            ip = line[0]
+            port = line[4]
+            username = line[1]
+            password = line[2]
+            key_path = line[3]
+            if line[5] == 'linux':
+                if len(port) == 0:
+                    port = '22'
+                if len(password) == 0:
+                    password = None
+                if len(key_path) == 0:
+                    key_path = None
+                create_linux_host(ip, port, username, password,
+                                  key_path, data_path)
+            elif line[5] == 'windows':
+                create_windows_host(ip, username, password, data_path)
+            elif line[5] == 'vmware':
+                if len(port) == 0:
+                    port = '443'
+                create_vmware_host(ip, port, username, password,
+                                   data_path)
+            else:
+                logging.warning("%s type error, please check." % ip)
 
 
 @vmware_host_manager.option("-i",
