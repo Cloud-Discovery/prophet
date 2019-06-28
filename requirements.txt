@@ -14,3 +14,4 @@ ansible
 pyvmomi
 paramiko
 wmic
+python-nmap

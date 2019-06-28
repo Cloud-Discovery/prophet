@@ -22,6 +22,7 @@ from prophet import app
 from prophet import utils
 from prophet.controller.linux_host import LinuxHostController, LinuxHostReport
 from prophet.controller.vmware import VMwareHostController, VMwareHostReport
+from prophet.controller.network import NetworkController
 from prophet.controller.windows_host import WindowsHostCollector, \
                                             WindowsHostReport
 
@@ -54,6 +55,10 @@ manager.add_command("host_report", host_report_manager)
 # Import hosts info file management command
 import_file_manager = Manager(app, usage="Import hosts info file management")
 manager.add_command("import_file", import_file_manager)
+
+# Scan network and generate initial hosts report
+network_manager = Manager(app, usage="Scan network with single ip or cidr")
+manager.add_command("network", network_manager)
 
 
 @linux_host_manager.option("-i",
@@ -283,6 +288,38 @@ def create_vmware_host(ip, port, username, password, data_path):
                                   collect_vms_path)
     vmware.get_all_info()
     logging.info("Collect all VCenter infos sucessful.")
+
+@network_manager.option("-h",
+                        "--host",
+                        dest="host",
+                        required=True,
+                        help="Input host, ex: 192.168.10.0/24, "
+                             "192.168.10.1-2")
+@network_manager.option("-a",
+                        "--arg",
+                        dest="arg",
+                        default="-O -sS",
+                        required=False,
+                        help="Arguments for nmap, for more detailed, "
+                             "please check nmap document")
+@network_manager.option("-d",
+                        "--data-path",
+                        dest="data_path",
+                        required=True,
+                        help="Generate initial host report path")
+def scan(host, arg, data_path):
+    if not os.path.exists(data_path):
+        logging.info("Creating data path %s..." % data_path)
+        utils.mkdir_p(data_path)
+    network = NetworkController(host, arg, data_path)
+    network.gen_report()
+    #vmware = VMwareHostController(ip,
+    #                              port,
+    #                              username,
+    #                              password,
+    #                              collect_vms_path)
+    #vmware.get_all_info()
+    #logging.info("Collect all VCenter infos sucessful.")
 
 
 def main():
