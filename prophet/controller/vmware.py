@@ -235,6 +235,7 @@ class VMwareHostController(object):
                     isinstance(dev, vim.VirtualVmxnet2):
                 back_info = dev.backing
                 nt_uuid = uuid.uuid1().hex
+                network_info[nt_uuid] = {}
                 if not isinstance(back_info,
                                   vim.VirtualEthernetCard.NetworkBackingInfo):
                     result = "non-network backing virtual network exists"
@@ -242,7 +243,6 @@ class VMwareHostController(object):
                     network_info[nt_uuid]["backing"] = result
                     continue
                 nt = dev.backing.network
-                network_info[nt_uuid] = {}
                 network_info[nt_uuid]["macAddress"] = \
                     dev.macAddress
                 network_info[nt_uuid]["accessible"] = \

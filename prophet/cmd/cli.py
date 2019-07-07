@@ -208,7 +208,7 @@ def create_host_report(input_path, output_path):
                             default=None,
                             required=True,
                             help="Output info File Path")
-def import_file(input_path, data_path):
+def batch_collection(input_path, data_path):
     logging.info("Checking input_path:%s......" % input_path)
     if not os.path.exists(input_path):
         raise OSError("Input path %s is not exists." % input_path)
@@ -219,29 +219,32 @@ def import_file(input_path, data_path):
     with open(input_path) as f:
         reader = csv.reader(f)
         for line in islice(reader, 1, None):
-            ip = line[0]
+            ip = line[1]
             port = line[4]
-            username = line[1]
-            password = line[2]
-            key_path = line[3]
-            if line[5] == 'linux':
-                if len(port) == 0:
-                    port = '22'
-                if len(password) == 0:
-                    password = None
-                if len(key_path) == 0:
-                    key_path = None
-                create_linux_host(ip, port, username, password,
-                                  key_path, data_path)
-            elif line[5] == 'windows':
-                create_windows_host(ip, username, password, data_path)
-            elif line[5] == 'vmware':
-                if len(port) == 0:
-                    port = '443'
-                create_vmware_host(ip, port, username, password,
-                                   data_path)
-            else:
-                logging.warning("%s type error, please check." % ip)
+            username = line[2]
+            password = line[3]
+            key_path = line[5]
+            if line[8] == 'check':
+                if len(password) == 0 and len(key_path) == 0:
+                    logging.warning("%s password or key_path not "
+                                    "filled in, skip the check." % ip)
+                    continue
+                if line[9] == 'Linux':
+                    if len(password) == 0:
+                        password = None
+                    if len(key_path) == 0:
+                        key_path = None
+                    create_linux_host(ip, port, username, password,
+                                      key_path, data_path)
+                elif line[9] == 'Windows':
+                    create_windows_host(ip, username, password, data_path)
+                elif line[9] == 'VMware':
+                    if len(port) == 0:
+                        port = '443'
+                    create_vmware_host(ip, port, username, password,
+                                       data_path)
+                else:
+                    logging.warning("%s type error, please check." % ip)
 
 
 @vmware_host_manager.option("-i",
@@ -289,6 +292,7 @@ def create_vmware_host(ip, port, username, password, data_path):
     vmware.get_all_info()
     logging.info("Collect all VCenter infos sucessful.")
 
+
 @network_manager.option("-h",
                         "--host",
                         dest="host",
@@ -313,13 +317,6 @@ def scan(host, arg, data_path):
         utils.mkdir_p(data_path)
     network = NetworkController(host, arg, data_path)
     network.gen_report()
-    #vmware = VMwareHostController(ip,
-    #                              port,
-    #                              username,
-    #                              password,
-    #                              collect_vms_path)
-    #vmware.get_all_info()
-    #logging.info("Collect all VCenter infos sucessful.")
 
 
 def main():

@@ -17,12 +17,17 @@ import nmap
 
 DEFAULT_ARGS = "-sS -O"
 DATA_FILE = "scan_hosts.csv"
-HEADERS = ["hostname", "ip", "username", "password", "mac",
-           "vendor", "os", "version", "tcp_ports"]
+HEADERS = ["hostname", "ip", "username", "password", "ssh_port",
+           "key_path", "mac", "vendor", "check_status", "os", "version",
+           "tcp_ports"]
 DEFAULT_LINUX_USER = "root"
 DEFAULT_WINDOWS_USER = "Administrator"
 DEFAULT_USER = "enter_your_username"
-DEFAULT_PASSWORD = "password"
+DEFAULT_PASSWORD = ""
+DEFAULT_KEY_PATH = ""
+DEFAULT_CHECK = "check"
+DEFAULT_NO_CHECK = ""
+
 
 class NetworkController(object):
 
@@ -50,17 +55,22 @@ class NetworkController(object):
                             host_info.get("osmatch"))
                     vendor = self._get_vendor(
                             host_info.get("vendor"), mac)
+                    ssh_port = self._get_ssh_port(ops)
                     all_tcp = ",".join(
                             [str(x) for x in self.nm[host].all_tcp()])
                     username = self._get_username(ops)
                     password = DEFAULT_PASSWORD
+                    check = self._get_check_status(vendor, ops)
                     row_data = {
                         "hostname": hostname,
                         "ip": host,
                         "username": username,
                         "password": password,
+                        "ssh_port": ssh_port,
+                        "key_path": DEFAULT_KEY_PATH,
                         "mac": mac,
                         "vendor": vendor,
+                        "check_status": check,
                         "os": ops,
                         "version": version,
                         "tcp_ports": all_tcp,
@@ -69,7 +79,7 @@ class NetworkController(object):
                     writer.writerow(row_data)
                 except Exception as e:
                     logging.warn("Analysis host %s failed, "
-                            "due to %s." % (host, e.message))
+                                 "due to %s." % (host, e.message))
 
     def _scan(self):
         self.nm.scan(hosts=self.host, arguments=self.arg)
@@ -82,6 +92,22 @@ class NetworkController(object):
     def _get_vendor(self, vendor, mac):
         if vendor:
             return vendor.get(mac)
+
+    def _get_ssh_port(self, os):
+        if os == "Linux":
+            DEFAULT_SSH_PORT = "22"
+        elif os == "VMware":
+            DEFAULT_SSH_PORT = "443"
+        else:
+            DEFAULT_SSH_PORT = "None"
+        return DEFAULT_SSH_PORT
+
+    def _get_check_status(self, vendor, os):
+        if vendor != "VMware" and \
+           (os == "Linux" or os == "Windows" or os == "VMware"):
+            return DEFAULT_CHECK
+        else:
+            return DEFAULT_NO_CHECK
 
     def _get_os(self, osmatch):
         osfamily = None
@@ -120,6 +146,8 @@ class NetworkController(object):
 
         logging.debug("osfamily is %s, version is %s." % (
                       osfamily, version))
+        if osfamily == "ESX Server":
+            osfamily = "VMware"
         return osfamily, version
 
     def _get_username(self, ops):
