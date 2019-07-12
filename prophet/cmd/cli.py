@@ -10,13 +10,14 @@
 # Copyright (c) 2019 This file is confidential and proprietary.
 # All Rights Resrved, Prophet Tech (Shanghai) Ltd (http://www.prophetech.cn).
 
-import csv
 import glob
+import time
 import logging
 import os
+import pandas as pd
+import shutil
 
 from flask_script import Manager
-from itertools import islice
 
 from prophet import app
 from prophet import utils
@@ -208,7 +209,18 @@ def create_host_report(input_path, output_path):
                             default=None,
                             required=True,
                             help="Output info File Path")
-def batch_collection(input_path, data_path):
+@import_file_manager.option("-f",
+                            "--force_check",
+                            dest="check_range",
+                            default=None,
+                            required=False,
+                            help="Force check all host")
+def batch_collection(input_path, data_path, check_range):
+    run_time = time.strftime("%Y%m%d%H%M%S",
+                             time.localtime(time.time()))
+    coll_path = os.path.join(data_path, 'collect_infos')
+    zip_file_name = ("collection_info" + '_' + run_time)
+    zip_file_path = os.path.join(data_path, zip_file_name)
     logging.info("Checking input_path:%s......" % input_path)
     if not os.path.exists(input_path):
         raise OSError("Input path %s is not exists." % input_path)
@@ -216,35 +228,66 @@ def batch_collection(input_path, data_path):
     if not os.path.exists(data_path):
         raise OSError("Output path %s is not exists." % data_path)
 
-    with open(input_path) as f:
-        reader = csv.reader(f)
-        for line in islice(reader, 1, None):
-            ip = line[1]
-            port = line[4]
-            username = line[2]
-            password = line[3]
-            key_path = line[5]
-            if line[8] == 'check':
-                if len(password) == 0 and len(key_path) == 0:
-                    logging.warning("%s password or key_path not "
-                                    "filled in, skip the check." % ip)
-                    continue
-                if line[9] == 'Linux':
-                    if len(password) == 0:
+    data = pd.read_csv(input_path)
+    for index, row in data.iterrows():
+        try:
+            ip = row["ip"]
+            port = row["ssh_port"]
+            username = row["username"]
+            password = row["password"]
+            key_path = row["key_path"]
+            if not pd.isnull(row["check_status"]):
+                if "CHECK" == row["check_status"].upper():
+                    if pd.isnull(row["password"]) \
+                       and pd.isnull(row["key_path"]):
+                        logging.warning("%s password or key_path not "
+                                        "filled in, skip the check." % ip)
+                        continue
+                    if not check_range:
+                        if row["do_status"] == "success":
+                            logging.info("%s has been checked and "
+                                         "skipped" % ip)
+                            continue
+                        if pd.isnull(row["do_status"]) \
+                           or row["do_status"] == "failed":
+                            logging.info("Force option is None, "
+                                         "checking IP......")
+                    elif check_range == 'check_all':
+                        logging.info("Force option is check_all, ignore "
+                                     "saving files and check all hosts")
+                    else:
+                        raise OSError("Force option input error, "
+                                      "please check.")
+
+                    data.loc[index, "do_status"] = "checking"
+                if row["os"] == "Linux":
+                    if pd.isnull(row["password"]):
                         password = None
-                    if len(key_path) == 0:
+                    if pd.isnull(row["key_path"]):
                         key_path = None
                     create_linux_host(ip, port, username, password,
                                       key_path, data_path)
-                elif line[9] == 'Windows':
+                elif row["os"] == "Windows":
                     create_windows_host(ip, username, password, data_path)
-                elif line[9] == 'VMware':
+                elif row["os"] == "VMware":
                     if len(port) == 0:
-                        port = '443'
+                        port = "443"
                     create_vmware_host(ip, port, username, password,
                                        data_path)
                 else:
-                    logging.warning("%s type error, please check." % ip)
+                    raise OSError("%s os type error, please check." % ip)
+            data.loc[index, "do_status"] = "success"
+            data.to_csv(input_path, index=False)
+        except Exception as err:
+            logging.error("%s check failed, please check." % ip)
+            data.loc[index, "do_status"] = "failed"
+            data.to_csv(input_path, index=False)
+            raise err
+
+    logging.info("All hosts information is collected.")
+    logging.info("Packing of collection info path %s to "
+                 "%s......" % (coll_path, data_path))
+    shutil.make_archive(zip_file_path, "zip", coll_path)
 
 
 @vmware_host_manager.option("-i",

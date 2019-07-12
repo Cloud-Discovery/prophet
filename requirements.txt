@@ -13,5 +13,6 @@ pyyaml
 ansible
 pyvmomi
 paramiko
+pandas
 wmic
 python-nmap

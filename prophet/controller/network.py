@@ -19,7 +19,7 @@ DEFAULT_ARGS = "-sS -O"
 DATA_FILE = "scan_hosts.csv"
 HEADERS = ["hostname", "ip", "username", "password", "ssh_port",
            "key_path", "mac", "vendor", "check_status", "os", "version",
-           "tcp_ports"]
+           "tcp_ports", "do_status"]
 DEFAULT_LINUX_USER = "root"
 DEFAULT_WINDOWS_USER = "Administrator"
 DEFAULT_USER = "enter_your_username"
@@ -27,6 +27,7 @@ DEFAULT_PASSWORD = ""
 DEFAULT_KEY_PATH = ""
 DEFAULT_CHECK = "check"
 DEFAULT_NO_CHECK = ""
+DEFAULT_DO_STATUS = ""
 
 
 class NetworkController(object):
@@ -74,6 +75,7 @@ class NetworkController(object):
                         "os": ops,
                         "version": version,
                         "tcp_ports": all_tcp,
+                        "do_status": DEFAULT_DO_STATUS
                     }
                     logging.debug("Writing row %s" % row_data)
                     writer.writerow(row_data)
