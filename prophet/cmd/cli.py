@@ -11,16 +11,15 @@
 # All Rights Resrved, Prophet Tech (Shanghai) Ltd (http://www.prophetech.cn).
 
 import glob
-import time
 import logging
 import os
 import pandas as pd
 import shutil
+import time
 
 from flask_script import Manager
 
 from prophet import app
-from prophet import utils
 from prophet.controller.linux_host import LinuxHostController, LinuxHostReport
 from prophet.controller.vmware import VMwareHostController, VMwareHostReport
 from prophet.controller.network import NetworkController
@@ -50,11 +49,11 @@ vmware_host_manager = Manager(app, usage="VMware host management")
 manager.add_command("vmware_host", vmware_host_manager)
 
 # Load host report management command
-host_report_manager = Manager(app, usage="Host report management")
+host_report_manager = Manager(app, usage="Host reports management")
 manager.add_command("host_report", host_report_manager)
 
 # Import hosts info file management command
-import_file_manager = Manager(app, usage="Import hosts info file management")
+import_file_manager = Manager(app, usage="Import host info files management")
 manager.add_command("import_file", import_file_manager)
 
 # Scan network and generate initial hosts report
@@ -92,20 +91,21 @@ manager.add_command("network", network_manager)
                            default=22,
                            required=False,
                            help="Input linux host port")
-@linux_host_manager.option("-d",
-                           "--data-path",
-                           dest="data_path",
+@linux_host_manager.option("-o",
+                           "--output-path",
+                           dest="output_path",
                            default=None,
                            required=True,
                            help="Input Info File Path")
-def create_linux_host(ip, port, username, password, key_path, data_path):
-    config_file_path = os.path.join(data_path,
-                                    'collect_infos',
-                                    'linux_hosts')
-
+def create_linux_host(ip, port, username, password, key_path, output_path):
+    config_file_path = os.path.abspath(
+        os.path.join(output_path,
+                     "collect_infos",
+                     "linux_hosts")
+    )
     if not os.path.exists(config_file_path):
-        logging.info("Cannot found %s directory in system, create it." %
-                     config_file_path)
+        logging.info("Cannot found %s directory in system, "
+                     "create it." % config_file_path)
         os.makedirs(config_file_path)
     host_info = LinuxHostController(ip,
                                     port,
@@ -134,160 +134,28 @@ def create_linux_host(ip, port, username, password, key_path, data_path):
                              default=None,
                              required=True,
                              help="Input windows host passowrd")
-@windows_host_manager.option("-d",
-                             "--data-path",
-                             dest="data_path",
+@windows_host_manager.option("-o",
+                             "--output-path",
+                             dest="output_path",
                              default=None,
                              required=True,
                              help="Input Info File Path")
-def create_windows_host(ip, username, password, data_path):
-    config_file_path = os.path.join(data_path,
-                                    'collect_infos',
-                                    'windows_hosts')
+def create_windows_host(ip, username, password, output_path):
+    config_file_path = os.path.abspath(
+        os.path.join(
+            output_path,
+            "collect_infos",
+            "windows_hosts")
+    )
     if not os.path.exists(config_file_path):
-        logging.info("Cannot found %s directory in system, create it." %
-                     config_file_path)
+        logging.info("Cannot found %s directory in system, "
+                     "create it." % config_file_path)
         os.makedirs(config_file_path)
     host_info = WindowsHostCollector(ip,
                                      username,
                                      password,
                                      config_file_path)
     host_info.get_windows_host_info()
-
-
-@host_report_manager.option("-i",
-                            "--input_path",
-                            dest="input_path",
-                            default=None,
-                            required=True,
-                            help="Input linux host "
-                            "collection info path")
-@host_report_manager.option("-o",
-                            "--output_path",
-                            dest="output_path",
-                            default=None,
-                            required=True,
-                            help="Output linux host "
-                            "analysis info path")
-def create_host_report(input_path, output_path):
-    logging.info("Checking input_path:%s......" % input_path)
-    if not os.path.exists(input_path):
-        raise OSError("Input path %s is not exists" % input_path)
-
-    if not os.path.exists(output_path):
-        raise OSError("Output path %s is not exists" % output_path)
-
-    if len(glob.glob("%s/*.yaml" % input_path)) == 0:
-        raise Exception("Input path:%s, not exists .yaml "
-                        "host data file" % input_path)
-    logging.info("Check input path completed")
-    host_reports = {"linux": LinuxHostReport,
-                    "windows": WindowsHostReport,
-                    "vmware": VMwareHostReport}
-    for host_type in host_reports:
-        all_files = glob.glob("%s/*_%s.yaml" % (input_path, host_type))
-        if len(all_files) != 0:
-            logging.info("Found %s %s files: %s" % (len(all_files),
-                                                    host_type,
-                                                    all_files))
-            run_analysis = host_reports[host_type](input_path,
-                                                   output_path,
-                                                   all_files)
-            run_analysis.get_report()
-    logging.info("Host report completed.")
-
-
-@import_file_manager.option("-i",
-                            "--input_path",
-                            dest="input_path",
-                            default=None,
-                            required=True,
-                            help="Input hosts info file path")
-@import_file_manager.option("-o",
-                            "--output_path",
-                            dest="data_path",
-                            default=None,
-                            required=True,
-                            help="Output info File Path")
-@import_file_manager.option("-f",
-                            "--force_check",
-                            dest="check_range",
-                            default=None,
-                            required=False,
-                            help="Force check all host")
-def batch_collection(input_path, data_path, check_range):
-    run_time = time.strftime("%Y%m%d%H%M%S",
-                             time.localtime(time.time()))
-    coll_path = os.path.join(data_path, 'collect_infos')
-    zip_file_name = ("collection_info" + '_' + run_time)
-    zip_file_path = os.path.join(data_path, zip_file_name)
-    logging.info("Checking input_path:%s......" % input_path)
-    if not os.path.exists(input_path):
-        raise OSError("Input path %s is not exists." % input_path)
-
-    if not os.path.exists(data_path):
-        raise OSError("Output path %s is not exists." % data_path)
-
-    data = pd.read_csv(input_path)
-    for index, row in data.iterrows():
-        try:
-            ip = row["ip"]
-            port = row["ssh_port"]
-            username = row["username"]
-            password = row["password"]
-            key_path = row["key_path"]
-            if not pd.isnull(row["check_status"]):
-                if "CHECK" == row["check_status"].upper():
-                    if pd.isnull(row["password"]) \
-                       and pd.isnull(row["key_path"]):
-                        logging.warning("%s password or key_path not "
-                                        "filled in, skip the check." % ip)
-                        continue
-                    if not check_range:
-                        if row["do_status"] == "success":
-                            logging.info("%s has been checked and "
-                                         "skipped" % ip)
-                            continue
-                        if pd.isnull(row["do_status"]) \
-                           or row["do_status"] == "failed":
-                            logging.info("Force option is None, "
-                                         "checking IP......")
-                    elif check_range == 'check_all':
-                        logging.info("Force option is check_all, ignore "
-                                     "saving files and check all hosts")
-                    else:
-                        raise OSError("Force option input error, "
-                                      "please check.")
-
-                    data.loc[index, "do_status"] = "checking"
-                if row["os"] == "Linux":
-                    if pd.isnull(row["password"]):
-                        password = None
-                    if pd.isnull(row["key_path"]):
-                        key_path = None
-                    create_linux_host(ip, port, username, password,
-                                      key_path, data_path)
-                elif row["os"] == "Windows":
-                    create_windows_host(ip, username, password, data_path)
-                elif row["os"] == "VMware":
-                    if len(port) == 0:
-                        port = "443"
-                    create_vmware_host(ip, port, username, password,
-                                       data_path)
-                else:
-                    raise OSError("%s os type error, please check." % ip)
-            data.loc[index, "do_status"] = "success"
-            data.to_csv(input_path, index=False)
-        except Exception as err:
-            logging.error("%s check failed, please check." % ip)
-            data.loc[index, "do_status"] = "failed"
-            data.to_csv(input_path, index=False)
-            raise err
-
-    logging.info("All hosts information is collected.")
-    logging.info("Packing of collection info path %s to "
-                 "%s......" % (coll_path, data_path))
-    shutil.make_archive(zip_file_path, "zip", coll_path)
 
 
 @vmware_host_manager.option("-i",
@@ -314,33 +182,231 @@ def batch_collection(input_path, data_path, check_range):
                             default=None,
                             required=True,
                             help="Input vcenter host password")
-@vmware_host_manager.option("-d",
-                            "--data-path",
-                            dest="data_path",
+@vmware_host_manager.option("-o",
+                            "--output-path",
+                            dest="output_path",
                             required=True,
                             help="Collect VMS info path")
-def create_vmware_host(ip, port, username, password, data_path):
-    collect_vms_path = os.path.join(data_path,
-                                    "collect_infos",
-                                    "vmware_hosts")
-    if not os.path.exists(collect_vms_path):
-        logging.info("Cannot found %s directory in system, create it." %
-                     collect_vms_path)
-        utils.mkdir_p(collect_vms_path)
-    vmware = VMwareHostController(ip,
-                                  port,
-                                  username,
-                                  password,
-                                  collect_vms_path)
-    vmware.get_all_info()
-    logging.info("Collect all VCenter infos sucessful.")
+def create_vmware_host(ip, port, username, password, output_path):
+    config_file_path = os.path.abspath(
+        os.path.join(
+            output_path,
+            "collect_infos",
+            "vmware_hosts")
+    )
+    if not os.path.exists(config_file_path):
+        logging.info("Cannot found %s directory in system, "
+                     "create it." % config_file_path)
+        os.makedirs(config_file_path)
+    host_info = VMwareHostController(ip,
+                                     port,
+                                     username,
+                                     password,
+                                     config_file_path)
+    host_info.get_all_info()
+
+
+@host_report_manager.option("-i",
+                            "--input_path",
+                            dest="input_path",
+                            default=None,
+                            required=True,
+                            help="Input linux host "
+                            "collection info path")
+@host_report_manager.option("-o",
+                            "--output_path",
+                            dest="output_path",
+                            default=None,
+                            required=True,
+                            help="Output linux host "
+                            "analysis info path")
+def create_host_report(input_path, output_path):
+    if not os.path.exists(input_path):
+        raise OSError("Input path %s is not exists."
+                      % input_path)
+    if not os.path.exists(output_path):
+        raise OSError("Output path %s is not exists."
+                      % output_path)
+    if len(glob.glob("%s/*.yaml" % input_path)) == 0:
+        raise Exception("Files of yaml not exist in path %s."
+                        % input_path)
+    input_abspath = os.path.abspath(input_path)
+    output_abspath = os.path.abspath(output_path)
+    host_reports = {
+        "linux": LinuxHostReport,
+        "windows": WindowsHostReport,
+        "vmware": VMwareHostReport
+    }
+    logging.info("Begain make host reports.")
+    for host_type, host_obj in host_reports.items():
+        host_files = glob.glob(
+            "%s/*_%s.yaml"
+            % (input_abspath, host_type)
+        )
+        if len(host_files) != 0:
+            logging.info(
+                "Found %s %s files: %s."
+                % (len(host_files), host_type, host_files)
+            )
+            run_analysis = host_obj(input_abspath,
+                                    output_abspath,
+                                    host_files)
+            run_analysis.get_report()
+    logging.info("Make host reports completed.")
+
+
+def host_collection(host_type, ip, username, output_path,
+                    port=None, password=None, key_path=None):
+    logging.info("Collect %s (%s) infomation."
+                 % (ip, host_type))
+    logging.debug(
+        "host_type=%s "
+        "ip=%s "
+        "username=%s "
+        "output_path=%s "
+        "port=%s "
+        "password=%s "
+        "key_path=%s "
+        % (host_type,
+           ip,
+           username,
+           output_path,
+           port,
+           password,
+           key_path)
+    )
+    if "Linux" == host_type:
+        create_linux_host(
+            ip, port, username,
+            password, key_path, output_path
+        )
+    elif "Windows" == host_type:
+        create_windows_host(
+            ip, username,
+            password, output_path
+        )
+    elif "VMware" == host_type:
+        if not port:
+            port = "443"
+        create_vmware_host(
+            ip, port, username,
+            password, output_path
+        )
+    else:
+        raise OSError("Error %s os type is invalid." % ip)
+
+
+def empty_str_to_none(string):
+    if not string:
+        return None
+    return string
+
+
+def pandas_value_to_python_value(pd_value):
+    if pd.isnull(pd_value):
+        return ""
+    elif float == type(pd_value):
+        return int(pd_value)
+    else:
+        return str(pd_value)
+
+
+def scan_hosts_csv_process(csv_file_path, output_path, force_check):
+    data = pd.read_csv(csv_file_path)
+    for index, row in data.iterrows():
+        try:
+            # hostname     = pandas_value_to_python_value(row["hostname"])
+            host_ip      = pandas_value_to_python_value(row["ip"])           # noqa
+            username     = pandas_value_to_python_value(row["username"])     # noqa
+            password     = pandas_value_to_python_value(row["password"])     # noqa
+            ssh_port     = pandas_value_to_python_value(row["ssh_port"])     # noqa
+            key_path     = pandas_value_to_python_value(row["key_path"])     # noqa
+            # host_mac     = pandas_value_to_python_value(row["mac"])
+            # vendor       = pandas_value_to_python_value(row["vendor"])
+            check_status = pandas_value_to_python_value(row["check_status"])
+            os_type      = pandas_value_to_python_value(row["os"]) # noqa
+            # version      = pandas_value_to_python_value(row["version"])
+            # tcp_ports    = pandas_value_to_python_value(row["tcp_ports"])
+            do_status    = pandas_value_to_python_value(row["do_status"])    # noqa
+
+            if "CHECK" == check_status.upper():
+                if not username:
+                    logging.warning("Skip %s. Username is need."
+                                    % host_ip)
+                    continue
+                if not password and not key_path:
+                    logging.warning("Skip %s. Password or key_path is need."
+                                    % host_ip)
+                    continue
+                if "TRUE" == force_check.upper():
+                    pass
+                else:
+                    if "SUCCESS" == do_status.upper():
+                        continue
+                host_collection(
+                    os_type, host_ip, username, output_path,
+                    port=empty_str_to_none(ssh_port),
+                    password=empty_str_to_none(password),
+                    key_path=empty_str_to_none(key_path)
+                )
+                data.loc[index, "do_status"] = "success"
+                data.to_csv(csv_file_path, index=False)
+        except Exception as e:
+            logging.exception(e)
+            logging.error("Check %s failed, please check it host info."
+                          % host_ip)
+            data.loc[index, "do_status"] = "failed"
+            data.to_csv(csv_file_path, index=False)
+            raise e
+
+
+@import_file_manager.option("-i",
+                            "--input_path",
+                            dest="input_path",
+                            default=None,
+                            required=True,
+                            help="Input host info file path")
+@import_file_manager.option("-o",
+                            "--output_path",
+                            dest="output_path",
+                            default=None,
+                            required=True,
+                            help="Output info file Path")
+@import_file_manager.option("-f",
+                            "--force_check",
+                            dest="force_check",
+                            default="",
+                            required=False,
+                            help="Force check all host")
+def batch_collection(input_path, output_path, force_check):
+    if not os.path.exists(input_path):
+        raise OSError("Input path %s is not exists." % input_path)
+    if not os.path.exists(output_path):
+        raise OSError("Output path %s is not exists." % output_path)
+
+    logging.info("Begin collect information of hosts in %s."
+                 % input_path)
+    scan_hosts_csv_process(input_path, output_path, force_check)
+    logging.info("All hosts information is collected.")
+
+    run_time = time.strftime(
+        "%Y%m%d%H%M%S",
+        time.localtime(time.time())
+    )
+    coll_path = os.path.join(output_path, "collect_infos")
+    zip_file_name = ("collection_info" + '_' + run_time)
+    zip_file_path = os.path.join(output_path, zip_file_name)
+    logging.info("Packing of collection info path %s to %s..."
+                 % (coll_path, output_path))
+    shutil.make_archive(zip_file_path, "zip", coll_path)
 
 
 @network_manager.option("-h",
                         "--host",
                         dest="host",
                         required=True,
-                        help="Input host, ex: 192.168.10.0/24, "
+                        help="Input host, example: "
+                             "192.168.10.0/24, "
                              "192.168.10.1-2")
 @network_manager.option("-a",
                         "--arg",
@@ -349,17 +415,18 @@ def create_vmware_host(ip, port, username, password, data_path):
                         required=False,
                         help="Arguments for nmap, for more detailed, "
                              "please check nmap document")
-@network_manager.option("-d",
-                        "--data-path",
-                        dest="data_path",
+@network_manager.option("-o",
+                        "--output-path",
+                        dest="output_path",
                         required=True,
                         help="Generate initial host report path")
-def scan(host, arg, data_path):
-    if not os.path.exists(data_path):
-        logging.info("Creating data path %s..." % data_path)
-        utils.mkdir_p(data_path)
-    network = NetworkController(host, arg, data_path)
-    network.gen_report()
+def scan(host, arg, output_path):
+    if not os.path.exists(output_path):
+        logging.info("Cannot found %s directory in system, "
+                     "create it." % output_path)
+        os.makedirs(output_path)
+    network = NetworkController(host, arg, output_path)
+    network.generate_report()
 
 
 def main():

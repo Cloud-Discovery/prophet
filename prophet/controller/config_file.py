@@ -11,11 +11,11 @@
 """Use yaml as config file"""
 
 import csv
+import json
 import logging
 import os
-import yaml
-import json
 import sys
+import yaml
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -24,13 +24,11 @@ sys.setdefaultencoding("utf-8")
 class ConfigFile(object):
 
     def __init__(self, config_file):
-        logging.info("Reading config file %s ..." % config_file)
-        self.config_file = str(config_file)
-
+        self.config_file = config_file
         self.cfg = {}
         if os.path.exists(self.config_file):
             with open(self.config_file, "r") as ymlfile:
-                self.cfg = yaml.load(ymlfile)
+                self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     def list(self):
         return self.cfg
@@ -43,15 +41,15 @@ class ConfigFile(object):
             self.cfg[key] = {}
         self.cfg[key] = values
         with open(self.config_file, "w") as outfile:
-            yaml.safe_dump(self.cfg,
-                           outfile,
+            yaml.safe_dump(self.cfg, outfile,
                            default_flow_style=False)
 
     def convert_json_to_yaml(self, values):
         json_datas = json.dumps(values)
         data_values = json.loads(json_datas)
         with open(self.config_file, "w") as yamlfile:
-            yaml.safe_dump(data_values, yamlfile, default_flow_style=False)
+            yaml.safe_dump(data_values, yamlfile,
+                           default_flow_style=False)
 
 
 class CsvDataFile(object):
@@ -62,27 +60,23 @@ class CsvDataFile(object):
 
     def write_data_to_csv(self):
         header = [
-                'host_type',
-                'hostname',
-                'address',
-                'macaddr',
-                'version',
-                'cpu_num',
-                'tol_mem(G)',
-                'disk_info',
-                'boot_type',
-                'support_synchronization',
-                'support_increment',
-                'migration_proposal'
-                ]
-        with open(self.output_file, 'ab+') as f:
-            writer = csv.DictWriter(f, header)
-            with open(self.output_file, 'ab+') as f:
-                reader = csv.reader(f)
-                if not [head_data for head_data in reader]:
-                    writer.writeheader()
-                    for row in self.host_data:
-                        writer.writerow(row)
-                else:
-                    for row in self.host_data:
-                        writer.writerow(row)
+            'host_type',
+            'hostname',
+            'version',
+            'address',
+            'macaddr',
+            'cpu_num',
+            'tol_mem(G)',
+            'disk_info',
+            'boot_type',
+            'support_synchronization',
+            'support_increment',
+            'migration_proposal'
+        ]
+        with open(self.output_file, 'a+') as f:
+            reader = csv.reader(f)
+            writer = csv.DictWriter(f, fieldnames=header)
+            if not [row for row in reader]:
+                writer.writeheader()
+            for row in self.host_data:
+                writer.writerow(row)

@@ -1,18 +1,15 @@
-# Flask
-Flask
-Flask-RESTful
-Flask-Script
-Flask-Babel
-
-# json schema validation
-jsonschema
-gevent
-requests
-pyyaml
-
-ansible
-pyvmomi
-paramiko
+ansible==2.7.8
+Flask==1.1.1
+Flask-RESTful==0.3.7
+Flask-Script==2.0.6
+Flask-Babel==0.12.2
+gevent==1.4.0
+jsonschema==3.0.1
 pandas
-wmic
-python-nmap
+paramiko==2.6.0
+python-nmap==0.6.1
+pyvmomi==6.7.1
+pyyaml==5.1.1
+requests==2.22.0
+# We need use wmic source code to adapt python3
+wmic==0.1.1
