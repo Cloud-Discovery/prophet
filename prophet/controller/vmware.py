@@ -228,6 +228,16 @@ class VMwareHostController(object):
     def _get_vms_info(self):
         esxi_obj = self._get_content_obj(self._content, [vim.HostSystem])
         vms_obj = self._get_content_obj(self._content, [vim.VirtualMachine])
+        cluster_obj = self._get_content_obj(self._content, [vim.ClusterComputeResource])
+        drs = False
+        ha = False
+        for c in cluster_obj:
+            if hasattr(c, 'configuration'):
+                if c.configuration.drsConfig.enabled:
+                    drs = True
+                if c.configuration.dasConfig.enabled:
+                    ha = True
+                break
         logging.info("Start get %s esxi all vms info." % esxi_obj)
         logging.debug("Get %s number vm in VCenter." % len(vms_obj))
         for vm in vms_obj:
@@ -260,6 +270,8 @@ class VMwareHostController(object):
                 self._vms_info[vmid]["changeTrackingSupported"] = vm.capability.changeTrackingSupported
                 networks_info = self._get_network_info(vm)
                 self._vms_info[vmid]["network"] = networks_info
+                self._vms_info[vmid]['drs'] = drs
+                self._vms_info[vmid]['ha'] = ha
                 for dsurl in vm.config.datastoreUrl:
                     datastore_name = dsurl.name
                     self._vms_info[vmid]["datastoreurl"] = {datastore_name: {}}
@@ -447,9 +459,18 @@ class VMwareHostReport(object):
                 migration_proposal + "VM not support CBT.")
         if migration_proposal.strip() == "":
             migration_proposal = "Check successful"
+        is_drs = 'Off'
+        is_ha = 'Off'
+        if data['drs']:
+            is_drs = 'On'
+        if data['ha']:
+            is_ha = 'On'
+
         return (
             support_synchronization,
             support_increment,
+            is_drs,
+            is_ha,
             migration_proposal
         )
 
@@ -470,7 +491,9 @@ class VMwareHostReport(object):
                 "boot_type": boot_type,
                 "support_synchronization": migration_check[0],
                 "support_increment": migration_check[1],
-                "migration_proposal": migration_check[2]
+                "drs_on": migration_check[2],
+                "ha_on": migration_check[3],
+                "migration_proposal": migration_check[4]
             }
         ]
         logging.info("Writing %s migration proposal..." % file)

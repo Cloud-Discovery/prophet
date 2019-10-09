@@ -71,6 +71,8 @@ class CsvDataFile(object):
             'boot_type',
             'support_synchronization',
             'support_increment',
+            'drs_on',
+            'ha_on',
             'migration_proposal'
         ]
         with open(self.output_file, 'a+') as f:
