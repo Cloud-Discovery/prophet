@@ -25,6 +25,7 @@ from prophet.controller.vmware import VMwareHostController, VMwareHostReport
 from prophet.controller.network import NetworkController
 from prophet.controller.windows_host import WindowsHostCollector, \
                                             WindowsHostReport
+from prophet.cmd.test_openstack_api import TestOpenStackDriver
 
 # Global settings for logging, default is debug and verbose
 log_format = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
@@ -59,6 +60,10 @@ manager.add_command("import_file", import_file_manager)
 # Scan network and generate initial hosts report
 network_manager = Manager(app, usage="Scan network with single ip or cidr")
 manager.add_command("network", network_manager)
+
+# Check Cloud APIs(OpenStack) command
+check_cloud_manager = Manager(app, usage="Check Cloud APIs")
+manager.add_command("check", check_cloud_manager)
 
 
 @linux_host_manager.option("-i",
@@ -427,6 +432,56 @@ def scan(host, arg, output_path):
         os.makedirs(output_path)
     network = NetworkController(host, arg, output_path)
     network.generate_report()
+
+
+@check_cloud_manager.option("-u",
+                            "--username",
+                            dest="username",
+                            required=True,
+                            help="Username or access key")
+@check_cloud_manager.option("-p",
+                            "--password",
+                            dest="password",
+                            required=True,
+                            help="Password or secret key")
+@check_cloud_manager.option("-P",
+                            "--projectname",
+                            dest="projectname",
+                            required=False,
+                            help="Projectname, if necessary")
+@check_cloud_manager.option("-U",
+                            "--auth_url",
+                            dest="auth_url",
+                            required=True,
+                            help="Auth url or endpoint")
+@check_cloud_manager.option("-r",
+                            "--region",
+                            dest="region",
+                            required=True,
+                            help="Region name")
+@check_cloud_manager.option("-d",
+                            "--domain",
+                            dest="domain",
+                            required=False,
+                            help="domain-name, example: Default")
+def cloud(username, password, projectname, auth_url,
+               region, domain):
+    params = {
+        'os_username': username,
+        'os_password': password,
+        'os_project_name': projectname,
+        'os_auth_url': auth_url,
+        'os_region_name': region,
+        'os_domain_name': domain,
+        'verbose': False,
+        'network_id': None,
+        'volume_type': None,
+        'volume_availability_zone': None,
+        'debug': False,
+        'flavor_id': None,
+    }
+    obj = TestOpenStackDriver(params)
+    obj.run()
 
 
 def main():

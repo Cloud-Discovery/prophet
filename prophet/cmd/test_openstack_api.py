@@ -15,7 +15,7 @@ import optparse
 import sys
 import time
 
-from cloud.openstack import OpenStackDriver
+from prophet.cloud.openstack import OpenStackDriver
 
 VER = "1.0.0"
 
@@ -23,7 +23,7 @@ VER = "1.0.0"
 class TestOpenStackDriver(object):
 
     def __init__(self, options):
-        self.auth_info = options.__dict__
+        self.auth_info = options
         self.openstack = OpenStackDriver(self.auth_info)
         self.instance_create_info = self._generate_create_info()
         self.volume_type = self.auth_info.get("volume_type")
