@@ -2,20 +2,16 @@ FROM hypermotion/base:latest
 
 MAINTAINER Chen Chunzai <chenchunzai@oneprocloud.com>
 
-RUN mkdir -p /tmp/prophet_install && cd /tmp && \
-    git clone http://192.168.10.254:8080/hypermotion/prophet
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./etc/pip/ /root/.pip/
+COPY ./usr/bin/ /usr/bin/
+COPY ./build/prophet /usr/lib/python2.7/site-packages/
 
-RUN cd /tmp/prophet && \
-    /usr/bin/python2 setup.py build && \
-    /usr/bin/python2 setup.py install -O1 --skip-build --root /tmp/prophet_install && \
-    cd /tmp/prophet_install && cp -rf usr / && \
-    cp -rf /tmp/prophet/etc/pip/ ~/.pip/ && \
-    pip install -r /tmp/prophet/requirements.txt && \
+RUN yum -y install gcc python-devel && \
+    pip install -r /tmp/requirements.txt && \
+    yum remove -y gcc && \
+    yum clean all && \
     rm -rf /root/.cache && \
     rm -rf /tmp/*
-#    yum clean all && yum -y install gcc python-devel && yum clean all&& \
-#    pip install cython && \
-#    /tmp/prophet/tools/compiler /tmp/prophet_install
-    
 
 ENTRYPOINT ["/bin/bash"]
