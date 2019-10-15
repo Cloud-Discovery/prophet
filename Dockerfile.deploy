@@ -7,9 +7,9 @@ COPY ./etc/pip/ /root/.pip/
 COPY ./usr/bin/ /usr/bin/
 COPY ./build/prophet/ /usr/lib/python2.7/site-packages/prophet/
 
-RUN yum -y install gcc python-devel && \
+RUN yum -y install gcc python-devel nmap && \
     pip install -r /tmp/requirements.txt && \
-    yum remove -y gcc && \
+    yum remove -y gcc python-devel && \
     yum clean all && \
     rm -rf /root/.cache && \
     rm -rf /tmp/*
