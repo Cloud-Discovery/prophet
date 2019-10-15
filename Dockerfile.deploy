@@ -5,7 +5,7 @@ MAINTAINER Chen Chunzai <chenchunzai@oneprocloud.com>
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./etc/pip/ /root/.pip/
 COPY ./usr/bin/ /usr/bin/
-COPY ./build/prophet /usr/lib/python2.7/site-packages/
+COPY ./build/prophet/ /usr/lib/python2.7/site-packages/prophet/
 
 RUN yum -y install gcc python-devel && \
     pip install -r /tmp/requirements.txt && \
