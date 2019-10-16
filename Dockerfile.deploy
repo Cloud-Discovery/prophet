@@ -11,6 +11,7 @@ RUN yum -y install gcc python-devel nmap && \
     pip install -r /tmp/requirements.txt && \
     yum remove -y gcc python-devel && \
     yum clean all && \
+    mv /etc/ld.so.conf.d/vmware-vix-disklib.conf /etc/ld.so.conf.d/vmware-vix-disklib.conf.bak && \
     rm -rf /root/.cache && \
     rm -rf /tmp/*
 
