@@ -362,7 +362,6 @@ def scan_hosts_csv_process(csv_file_path, output_path, force_check):
                           % host_ip)
             data.loc[index, "do_status"] = "failed"
             data.to_csv(csv_file_path, index=False)
-            raise e
 
 
 @import_file_manager.option("-i",
