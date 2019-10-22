@@ -2,6 +2,7 @@ FROM hypermotion/base:latest
 
 MAINTAINER Chen Chunzai <chenchunzai@oneprocloud.com>
 
+ENV LANG en_US.UTF-8
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./etc/pip/ /root/.pip/
 COPY ./usr/bin/ /usr/bin/
