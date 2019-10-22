@@ -278,11 +278,9 @@ class LinuxHostReport(object):
                     "ava_size(G):%s" % str(
                         int(mount["size_available"]) / 1024 / 1024 / 1024
                         )[:4],
-                    "ava_ratio:%s" % (
-                        "%.0f%%" % (
-                            int(mount["size_available"]) / int(mount["size_total"]) * 100  # noqa
-                            )
-                        )
+                    "ava_ratio:%s" % ("%.0f%%" % (
+                        float("%.4f" % mount["size_available"]) / \
+                                float("%.4f" % mount["size_total"]) * 100))
                 ]
         return mount_info
 
