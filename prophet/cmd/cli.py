@@ -398,11 +398,15 @@ def batch_collection(input_path, output_path, force_check):
         time.localtime(time.time())
     )
     coll_path = os.path.join(output_path, "collect_infos")
-    zip_file_name = ("collection_info" + '_' + run_time)
-    zip_file_path = os.path.join(output_path, zip_file_name)
-    logging.info("Packing of collection info path %s to %s..."
-                 % (coll_path, output_path))
-    shutil.make_archive(zip_file_path, "zip", coll_path)
+    if os.path.exists(coll_path):
+        zip_file_name = ("collection_info" + '_' + run_time)
+        zip_file_path = os.path.join(output_path, zip_file_name)
+        logging.info("Packing of collection info path %s to %s..."
+                     % (coll_path, output_path))
+        shutil.make_archive(zip_file_path, "zip", coll_path)
+    else:
+        logging.warn("Can not collect any information, "
+                     "please update config file: %s" % input_path)
 
 
 @network_manager.option("-h",
