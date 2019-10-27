@@ -24,11 +24,6 @@ import subprocess
 import time
 from datetime import datetime
 
-from prophet import app
-
-from flask import jsonify, make_response
-from flask_babel import gettext as _
-
 
 class ProcessExecutionError(Exception):
     def __init__(self, stdout=None, stderr=None, exit_code=None,
@@ -367,16 +362,6 @@ def mkdir_p(path):
             pass
         else:
             raise
-
-
-def load_configs(config_file):
-    """Load configuration by orders"""
-
-    if os.path.isfile(config_file):
-        app.config.from_pyfile(config_file)
-        return app
-    else:
-        raise IOError("Can not find any config file.")
 
 
 def setup_logging(log_path=None, log_name=None,

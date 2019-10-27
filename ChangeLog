@@ -1,11 +1,29 @@
 CHANGES
 =======
 
-* Fixed get some vmware host suffix such as VCenter && Esxi host
+* Update wmi version
+* Move compiler
+* Add Language en\_US.utf8
+* Update tox.ini
+* Use float when calculate parameter ava\_ratio
+* Remove raise exception when scanning
+* Add sshpass rpm
+* Reload ld config
+* rename so.conf
+* Add nmap package
+* Add project file to object dir
+* Fix dockerfile for prophet
+* Modified DockerFile deploy
+* Add HA/DRS status to analysis report
+* Add openstack api script
+* Code optimization
+* Update prophet code
+* Update prophet code
+* Add a new cli to scan network and generate initial report
+* Add import Host Information File
+* Fixed collect vmware host info output file suffix such as VCenter && Esxi host
 * Add linux\windows host analysis report and windows information collection
 * Fixed Unable to get mac address and disk capacity of virtual machine
-* Fixed Unable to obtain virtual machine Mac and disk capacity
-* Add get vmware and linux host modules in this project
 * Collect VMware and physical machine infomations
 * Fix pepe8 not check
 * Add cli interface in this project
