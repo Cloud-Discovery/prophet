@@ -23,6 +23,8 @@ from prophet.controller.vmware import VMwareHostController
 
 REPORT_PATH_NAME = "host_collection_info"
 REPORT_PREFIX = "host_collection_info"
+# Scan report without username and password
+SCAN_REPORT_FILENAME = "scan_hosts.csv"
 
 LINUX_REPORT_PATH_NAME = "linux_hosts"
 WINDOWS_REPORT_PATH_NAME = "windows_hosts"
@@ -35,6 +37,9 @@ VMWARE = "VMWARE"
 
 # VMware
 DEFAULT_VMWARE_PORT = 443
+
+# Sensitive files
+SENSITIVE_FILES = ["hosts.cfg", "host_exsi.cfg", "hosts"]
 
 class BatchJob(object):
 
@@ -68,6 +73,10 @@ class BatchJob(object):
         return REPORT_PREFIX + "_" + timestamp
 
     @property
+    def scan_report_path(self):
+        return os.path.join(self.coll_path, SCAN_REPORT_FILENAME)
+
+    @property
     def linux_report_path(self):
         return os.path.join(self.coll_path, LINUX_REPORT_PATH_NAME)
 
@@ -93,6 +102,7 @@ class BatchJob(object):
                      "from %s, generate report "
                      "in %s..." % (self.host_file, self.report_filename))
         hosts = self._parse_host_file()
+
         for index, row in hosts.iterrows():
             logging.debug("Current row is\n%s" % row)
             try:
@@ -157,11 +167,30 @@ class BatchJob(object):
                 hosts.to_csv(self.host_file, index=False)
         logging.info("Sucessfully collect hosts info.")
 
+        self._save_insensitive_scan_report(hosts)
+
     def package(self):
+        # Clean sensitive file before package
+        self._clean()
+
         logging.info("Packing of collection info path %s to %s..."
                      % (self.coll_path, self.report_full_path))
         os.chdir(self.output_path)
         shutil.make_archive(self.report_basename, "zip", self.coll_path)
+
+    def _save_insensitive_scan_report(self, hosts):
+        logging.info("Saving insensitive scan "
+                     "report in %s" % self.scan_report_path)
+        hosts[["hostname",
+               "ip",
+               "mac",
+               "vendor",
+               "os",
+               "version",
+               "tcp_ports",
+               "check_status",
+               "do_status"]].to_csv(self.scan_report_path, index=False)
+        logging.info("Save insensitive scan report done.")
 
     def _prepare(self):
         for report_path in [self.linux_report_path,
@@ -173,7 +202,17 @@ class BatchJob(object):
 
     def _clean(self):
         """Remove senstive files"""
-        pass
+        logging.info("Cleanning sensitive file before package...")
+        for clean_path in [self.linux_report_path,
+                           self.windows_report_path,
+                           self.vmware_report_path]:
+            for filename in SENSITIVE_FILES:
+                clean_file = os.path.join(clean_path, filename)
+                if os.path.exists(clean_file):
+                    logging.info("Deleting file %s..." % clean_file)
+                    os.remove(clean_file)
+                    logging.info("Delete file %s done." % clean_file)
+        logging.info("Clean sensitive file Succesfully.")
 
     def _parse_host_file(self):
         data = pd.read_csv(self.host_file)
