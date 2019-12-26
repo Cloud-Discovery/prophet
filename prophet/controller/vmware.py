@@ -245,6 +245,8 @@ class VMwareHostController(object):
                 obj_index = esxi_obj.index(vm.summary.runtime.host)
                 esxi_host = esxi_obj[obj_index].name
                 vmid = vm.config.instanceUuid
+                # if 'stress-testing' in vm.config.name:
+                #     continue
                 self._vms_info[vmid] = {"esxi_host": esxi_host}
                 self._vms_info[vmid]["name"] = vm.config.name
                 self._vms_info[vmid]["memoryMB"] = vm.config.hardware.memoryMB

@@ -20,6 +20,7 @@ import pandas as pd
 from prophet.controller.linux_host import LinuxHostController
 from prophet.controller.windows_host import WindowsHostCollector
 from prophet.controller.vmware import VMwareHostController
+from prophet.controller.gen_mac import GenerateMac
 
 REPORT_PATH_NAME = "host_collection_info"
 REPORT_PREFIX = "host_collection_info"
@@ -168,6 +169,9 @@ class BatchJob(object):
         logging.info("Sucessfully collect hosts info.")
 
         self._save_insensitive_scan_report(hosts)
+        output_path = os.path.join(self.output_path, REPORT_PATH_NAME)
+        macs = GenerateMac(output_path)
+        macs.save_to_yaml()
 
     def package(self):
         # Clean sensitive file before package

@@ -97,7 +97,10 @@ class NetworkController(object):
 
     def _get_mac(self, addresses):
         if addresses:
-            return addresses.get("mac")
+            mac = addresses.get("mac")
+            if mac:
+                mac = mac.lower()
+            return mac
 
     def _get_vendor(self, vendor, mac):
         if vendor:
@@ -119,7 +122,7 @@ class NetworkController(object):
         return DEFAULT_PORT
 
     def _get_check_status(self, vendor, osfamily):
-        if vendor.lower() != "vmware":
+        if vendor and vendor.lower() != "vmware":
             if osfamily.lower() == "linux" \
                or osfamily.lower() == "windows" \
                or osfamily.lower() == "vmware":

@@ -24,7 +24,7 @@ from prophet.controller.batch_job import BatchJob
 
 VER = "1.0.0 Beta"
 
-def log_init(debug=False, verbose=False):
+def log_init(debug=False, verbose=False, log_path=None):
     """Set up global logs"""
     log_format = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
     log_level = logging.INFO
@@ -37,7 +37,14 @@ def log_init(debug=False, verbose=False):
                 format=log_format,
                 level=log_level)
     else:
-        logging.basicConfig(
+        if log_path:
+            log_file = os.path.join(log_path, "prophet.log")
+            logging.basicConfig(
+                format=log_format,
+                level=log_level,
+                filename=log_file)
+        else:
+            logging.basicConfig(
                 format=log_format,
                 level=log_level)
 
@@ -103,7 +110,7 @@ def parse_sys_args(argv):
  
 def main():
     args = parse_sys_args(sys.argv)
-    log_init(args.debug, args.verbose)
+    log_init(args.debug, args.verbose, args.output_path)
     args.func(args)
  
 if __name__ == "__main__":

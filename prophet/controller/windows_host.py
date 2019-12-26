@@ -19,15 +19,17 @@ from prophet.controller.config_file import ConfigFile, CsvDataFile
 from prophet import utils
 
 WMI_COMMANDS = [
-    "Win32_Computersystem",
-    "Win32_Operatingsystem",
+    "Win32_ComputerSystem",
+    "Win32_OperatingSystem",
     "Win32_DiskPartition",
     "Win32_Processor",
     "Win32_PhysicalMemory",
-    "win32_NetworkAdapterConfiguration WHERE IPEnabled=True",
-    "win32_LogicalDisk WHERE DriveType = 3",
-    "win32_DiskDrive",
-    "Win32_Process"
+    "Win32_NetworkAdapterConfiguration WHERE IPEnabled=True",
+    "Win32_LogicalDisk WHERE DriveType = 3",
+    "Win32_DiskDrive",
+    "Win32_Process",
+    "Win32_PerfFormattedData_Tcpip_NetworkInterface",
+    "Win32_PerfRawData_Tcpip_NetworkInterface"
 ]
 WMI_DELIMITER = "|ONEPROCLOUD|"
 
@@ -119,12 +121,11 @@ class WindowsHostCollector(object):
         payload[class_name] = []
 
         title_line = lines.pop(0)
-        titles = title_line.split(WMI_DELIMITER)
-        payload[class_name].append(titles)
+        keys = title_line.split(WMI_DELIMITER)
         for line in lines:
             values = line.split(WMI_DELIMITER)
-            if len(values) == len(titles):
-                payload[class_name].append(values)
+            if len(values) == len(keys):
+                payload[class_name].append(dict(zip(keys, values)))
             else:
                 logging.debug("Not enough value in this "
                               "line %s, ignore." % line)
