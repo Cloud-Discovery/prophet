@@ -1,0 +1,42 @@
+# Dockerfile template
+ARG DOCKERFILE_AUTHOR
+ARG BASE_REPO_URL
+FROM ${BASE_REPO_URL}/centos:base-image
+LABEL maintainer="$DOCKERFILE_AUTHOR"
+
+ENV LANG en_US.UTF-8
+
+COPY ./prophet.tag /etc/prophet/
+COPY ./prophet_commit.log /var/log/commit_log/
+COPY ./etc/pip/ /root/.pip/
+COPY ./etc/repo/ /etc/yum.repos.d/
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./tools/wmi-1.3.14-4.el7.art.x86_64.rpm /tmp
+{% if DOCKER_BUILD_ENV == "DEV" %}
+COPY ./usr /usr
+{% else %}
+COPY ./build/prophet /usr/lib/python2.7/site-packages/
+{% endif %}
+
+RUN yum install -y git gcc python-devel nmap sshpass && \
+    yum install -y /tmp/wmi-1.3.14-4.el7.art.x86_64.rpm && \
+    pip install setuptools --upgrade && \
+    pip install --default-timeout=100 -r /tmp/requirements.txt && \
+    yum remove -y git gcc python-devel libyaml-devel && \
+    mv /etc/ld.so.conf.d/vmware-vix-disklib.conf /etc/ld.so.conf.d/vmware-vix-disklib.conf.bak && \
+    ldconfig && \
+    yum clean all && \
+    rm -rf /root/.cache && \
+    rm -rf /tmp/*
+
+{% if DOCKER_BUILD_ENV == "CUSTOM_USER_1" %}
+    # example: RUN sed -i "s#hello#test#g" /path/to/file
+    pass
+{% elif DOCKER_BUILD_ENV == "CUSTOM_USER_2" %}
+    # example: RUN sed -i "s#hello#test#g" /path/to/file
+    pass
+{% endif %}
+
+ENTRYPOINT ["/bin/bash"]
+
+
