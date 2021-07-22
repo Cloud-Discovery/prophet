@@ -104,6 +104,10 @@ class BatchJob(object):
                      "in %s..." % (self.host_file, self.report_filename))
         hosts = self._parse_host_file()
 
+        success_hosts = []
+        failed_hosts = []
+        logging.info("Trying to collect %s host(s)..." % len(hosts))
+
         for index, row in hosts.iterrows():
             logging.debug("Current row is\n%s" % row)
             try:
@@ -136,26 +140,42 @@ class BatchJob(object):
 
                 logging.info("Beginning to collect %s "
                              "information..." % host_ip)
-                if os_type.upper() == LINUX:
-                    host_info = LinuxHostController(
-                        host_ip, ssh_port, username,
-                        password, key_path, self.linux_report_path)
-                    host_info.get_linux_host_info()
-                elif os_type.upper() == WINDOWS:
-                    host_info = WindowsHostCollector(
-                        host_ip, username, password,
-                        self.windows_report_path)
-                    host_info.get_windows_host_info()
-                elif os_type.upper() == VMWARE:
-                    if not ssh_port:
-                        ssh_port = 443
-                    host_info = VMwareHostController(
-                        host_ip, ssh_port, username, password,
-                        self.vmware_report_path)
-                    host_info.get_all_info()
-                else:
-                    raise OSError("Unsupport os type %s "
-                                  "if host %s" % (os_type, host_ip))
+
+                collect_os_type = os_type.upper()
+                try:
+                    if collect_os_type == LINUX:
+                        host_info = LinuxHostController(
+                            host_ip, ssh_port, username,
+                            password, key_path,
+                            self.linux_report_path)
+                        host_info.get_linux_host_info()
+                    elif collect_os_type == WINDOWS:
+                        host_info = WindowsHostCollector(
+                            host_ip, username, password,
+                            self.windows_report_path)
+                        host_info.get_windows_host_info()
+                    elif collect_os_type == VMWARE:
+                        if not ssh_port:
+                            ssh_port = 443
+                        host_info = VMwareHostController(
+                            host_ip, ssh_port, username, password,
+                            self.vmware_report_path)
+                        host_info.get_all_info()
+                    else:
+                        raise OSError("Unsupport os type %s "
+                                      "if host %s" % (
+                                          collect_os_type, host_ip))
+
+                    success_hosts.append("[%s]%s" % (
+                        collect_os_type, host_ip))
+                except Exception as e:
+                    logging.warn(
+                            "Hosts [%s]%s collect failed, "
+                            "due to:" % (collect_os_type, host_ip))
+                    logging.exception(e)
+                    failed_hosts.append("[%s]%s" % (
+                        collect_os_type, host_ip))
+
                 hosts.loc[index, "do_status"] = "success"
                 hosts.to_csv(self.host_file, index=False)
                 logging.info("Sucessfully collect %s "
@@ -166,12 +186,31 @@ class BatchJob(object):
                               % host_ip)
                 hosts.loc[index, "do_status"] = "failed"
                 hosts.to_csv(self.host_file, index=False)
+
         logging.info("Sucessfully collect hosts info.")
 
         self._save_insensitive_scan_report(hosts)
         output_path = os.path.join(self.output_path, REPORT_PATH_NAME)
         macs = GenerateMac(output_path)
         macs.save_to_yaml()
+
+        logging.info("===========Summary==========")
+
+        logging.info(
+                "Totally got %s host(s), "
+                "success %s hosts, "
+                "failed %s hosts." % (
+                    len(hosts),
+                    len(success_hosts),
+                    len(failed_hosts)))
+
+        if success_hosts:
+            logging.debug("Success hosts: %s" % success_hosts)
+
+        if failed_hosts:
+            logging.info("Failed hosts: %s" % failed_hosts)
+
+        logging.info("============================")
 
     def package(self):
         # Clean sensitive file before package

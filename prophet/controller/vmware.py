@@ -60,6 +60,7 @@ class VMwareHostController(object):
         self._esxis_info = {}
         self._vms_info = {}
         self._vc_info = {}
+
         self._connect_info = {
             "VMware_" + self.host: {
                 "ipaddr": self.host,
@@ -68,6 +69,18 @@ class VMwareHostController(object):
                 "password": self.password
             }
         }
+
+        # Generate report for vCenter collection
+        self.success_vcs = []
+        self.failed_vcs = []
+
+        # Generate report for ESXi collection
+        self.success_esxis = []
+        self.failed_esxis = []
+
+        # Generate report for VM collection
+        self.success_vms = []
+        self.failed_vms = []
 
     def _check_connect(self):
         try:
@@ -110,47 +123,107 @@ class VMwareHostController(object):
         return [view for view in containerView.view]
 
     def _get_vcenter_info(self):
-        logging.debug("Begin get %s VCenter server info." % self.host)
-        self._vc_info[self.host] = {}
-        self._vc_info[self.host]["name"] = self._content.about.name
-        self._vc_info[self.host]["fullName"] = self._content.about.fullName
-        self._vc_info[self.host]["vendor"] = self._content.about.vendor
-        self._vc_info[self.host]["version"] = self._content.about.version
-        self._vc_info[self.host]["build"] = self._content.about.build
-        self._vc_info[self.host]["localeVersion"] = self._content.about.localeVersion
-        self._vc_info[self.host]["localeBuild"] = self._content.about.localeBuild
-        self._vc_info[self.host]["osType"] = self._content.about.osType
-        self._vc_info[self.host]["productLineId"] = self._content.about.productLineId
-        self._vc_info[self.host]["apiType"] = self._content.about.apiType
-        self._vc_info[self.host]["apiVersion"] = self._content.about.apiVersion
-        self._vc_info[self.host]["instanceUuid"] = self._content.about.instanceUuid
-        self._vc_info[self.host]["licenseProductName"] = self._content.about.licenseProductName
-        self._vc_info[self.host]["licenseProductVersion"] = \
-            self._content.about.licenseProductVersion
-        logging.debug("Get %s VCenter server info %s."
-                      % (self.host, self._vc_info))
+        logging.info(
+                "Trying to get "
+                "VMware vCenter %s info..." % self.host)
+        try:
+            self._vc_info[self.host] = {
+                "name": getattr(self._content, "about.name", ""),
+                "fullName" : getattr(self._content, "about.fullName", ""),
+                "vendor" : getattr(self._content, "about.vendor", ""),
+                "version" : getattr(self._content, "about.version", ""),
+                "build" : getattr(self._content, "about.build", ""),
+                "localeVersion" : getattr(
+                    self._content, "about.localeVersion", ""),
+                "localeBuild" : getattr(
+                    self._content, "about.localeBuild", ""),
+                "osType" : getattr(self._content, "about.osType", ""),
+                "productLineId" : getattr(
+                    self._content, "about.productLineId", ""),
+                "apiType" : getattr(self._content, "about.apiType", ""),
+                "apiVersion" : getattr(
+                    self._content, "about.apiVersion", ""),
+                "instanceUuid" : getattr(
+                    self._content, "about.instanceUuid", ""),
+                "licenseProductName" : getattr(
+                    self._content, "about.licenseProductName", ""),
+                "licenseProductVersion" : getattr(
+                    self._content, "about.licenseProductVersion", "")
+            }
+            self.success_vcs.append(self.host)
+        except Exception as e:
+            logging.error(
+                    "Failed to get vCenter %s "
+                    "information, due to:" % self.host)
+            logging.exception(e)
+            self.failed_vcs.append(self.host)
+            return
+
+        logging.info(
+                "Success to get VMWare vCenter "
+                "%s info succesfully: %s" % (
+                    self.host, self._vc_info))
 
     def get_all_info(self):
+        """Get all VMware related information
+
+        If the specify ip is vCenter, first get vCenter information,
+        then get exsi later. If it's only esxi, then just save the
+        esxi information.
+
+        After that get all VMs and save to files.
+        """
+
+        server_type = "_exsi"
         if self._content.about.name == "VMware vCenter Server":
             server_type = "_vcenter"
             self._get_vcenter_info()
-            self._get_esxi_info()
-            self._vc_info[self.host]["esxi"] = self._esxis_info
-            self._write_file_yaml(
-                self.output_path, self.host,
-                self._vc_info, suffix=server_type)
-        else:
-            server_type = "_exsi"
-            self._get_esxi_info()
-            self._write_file_yaml(
-                self.output_path, self.host,
-                self._esxis_info, suffix=server_type)
+
+        # Write connection information to host_<type>.cfg
         self._write_file_yaml(
             self.output_path, "host",
             self._connect_info,
             suffix=server_type,
             filetype="cfg")
+
+        try:
+            self._get_esxi_info()
+            success_esxis.append()
+        except Exception as e:
+            logging.warn("Failed to get ESXi ")
+
+
+
+
+        #if self._content.about.name == "VMware vCenter Server":
+        #    server_type = "_vcenter"
+        #    self._get_vcenter_info()
+        #    self._get_esxi_info()
+        #    self._vc_info[self.host]["esxi"] = self._esxis_info
+
+        #    # Save vCenter and esxi info
+        #    self._write_file_yaml(
+        #        self.output_path, self.host,
+        #        self._vc_info, suffix=server_type)
+        #else:
+        #    server_type = "_exsi"
+        #    self._get_esxi_info()
+
+        #    # only save esxi info
+        #    self._write_file_yaml(
+        #        self.output_path, self.host,
+        #        self._esxis_info, suffix=server_type)
+
+        #self._write_file_yaml(
+        #    self.output_path, "host",
+        #    self._connect_info,
+        #    suffix=server_type,
+        #    filetype="cfg")
+
         self._get_vms_info()
+
+        logging.info("===========VMware Summary==========")
+        logging.info("===================================")
 
     def _get_disk_info(self, vm):
         disk_info = {}
@@ -200,28 +273,33 @@ class VMwareHostController(object):
     def _get_network_info(self, vm):
         network_info = {}
         logging.info("Start get %s network info." % vm.config.name)
+        logging.debug("vm.config.hardware.device = %s" % vm.config.hardware.device)
+
         for dev in vm.config.hardware.device:
-            if isinstance(dev, vim.VirtualE1000) \
-               or isinstance(dev, vim.VirtualE1000e) \
-               or isinstance(dev, vim.VirtualVmxnet3) \
-               or isinstance(dev, vim.VirtualVmxnet2):
-                back_info = dev.backing
-                nt_uuid = uuid.uuid1().hex
-                network_info[nt_uuid] = {}
-                if not isinstance(back_info,
-                                  vim.VirtualEthernetCard.NetworkBackingInfo):
-                    result = "non-network backing virtual network exists"
-                    logging.warning(result)
-                    network_info[nt_uuid]["backing"] = result
-                    continue
-                nt = dev.backing.network
-                network_info[nt_uuid]["macAddress"] = dev.macAddress
-                network_info[nt_uuid]["accessible"] = nt.summary.accessible
-                network_info[nt_uuid]["deviceName"] = nt.summary.name
-                logging.debug("Get %s vm network %s info."
-                              % (vm.config.name, network_info))
-            else:
+
+            # NOTE(Ray): This code is copied from hamal
+            if not isinstance(dev, vim.vm.device.VirtualEthernetCard):
                 continue
+            logging.debug("Found network device: %s" % dev)
+            # if device.baking is not VirtualDeviceNetworkBackingInfo
+            # means the vm has no network attribute
+            nt_uuid = uuid.uuid1().hex
+            network_info[nt_uuid] = {}
+
+            addr = ""
+            if isinstance(
+                    dev.backing,
+                    vim.VirtualEthernetCardNetworkBackingInfo):
+                addr = dev.backing.network.summary.ipPoolId
+
+            nt = dev.backing.network
+            network_info[nt_uuid]["macAddress"] = dev.macAddress
+            network_info[nt_uuid]["accessible"] = nt.summary.accessible
+            network_info[nt_uuid]["deviceName"] = nt.summary.name
+            network_info[nt_uuid]["ipPoolId"] = addr
+            logging.debug("Get %s vm network %s info."
+                          % (vm.config.name, network_info))
+
         logging.info("Get %s vm all nets info successful." % vm.config.name)
         return network_info
 
@@ -302,74 +380,117 @@ class VMwareHostController(object):
                      % (filename))
 
     def _get_esxi_info(self):
-        esxi_obj = self._get_content_obj(self._content, [vim.HostSystem])
-        logging.info("start get %s exsi info." % esxi_obj)
+        """Get ESXi information"""
+
+        esxi_obj = self._get_content_obj(self._content,
+                                         [vim.HostSystem])
+
+        logging.info("Trying to get ESXi info...")
         for esxi in esxi_obj:
-            logging.info("start get %s exsi info." % esxi.name)
-            self._esxis_info[esxi.name] = {
-                "esxi_info": {},
-                "datastore": {},
-                "network": {}
-            }
-            self._esxis_info[esxi.name]["esxi_info"]["vendor"] = esxi.summary.hardware.vendor
-            self._esxis_info[esxi.name]["esxi_info"]["model"] = esxi.summary.hardware.model
-            self._esxis_info[esxi.name]["esxi_info"]["port"] = esxi.summary.config.port
-            for i in esxi.summary.hardware.otherIdentifyingInfo:
-                if isinstance(i, vim.host.SystemIdentificationInfo):
-                    self._esxis_info[esxi.name]["esxi_info"]["SN"] = i.identifierValue
-            self._esxis_info[esxi.name]["esxi_info"]["fullName"] = esxi.summary.config.product.fullName
-            self._esxis_info[esxi.name]["esxi_info"]["version"] = esxi.summary.config.product.version
-            self._esxis_info[esxi.name]["esxi_info"]["build"] = esxi.summary.config.product.build
-            self._esxis_info[esxi.name]["esxi_info"]["osType"] = esxi.summary.config.product.osType
-            self._esxis_info[esxi.name]["esxi_info"]["licenseProductName"] = esxi.summary.config.product.licenseProductName
-            self._esxis_info[esxi.name]["esxi_info"]["licenseProductVersion"] = esxi.summary.config.product.licenseProductVersion
-            self._esxis_info[esxi.name]["esxi_info"]["MemorySize"] = esxi.summary.hardware.memorySize / 1024 / 1024
-            self._esxis_info[esxi.name]["esxi_info"]["cpuModel"] = esxi.summary.hardware.cpuModel
-            self._esxis_info[esxi.name]["esxi_info"]["cpuMhz"] = esxi.summary.hardware.cpuMhz
-            self._esxis_info[esxi.name]["esxi_info"]["numCpuPkgs"] = esxi.summary.hardware.numCpuPkgs
-            self._esxis_info[esxi.name]["esxi_info"]["numCpuCores"] = esxi.summary.hardware.numCpuCores
-            self._esxis_info[esxi.name]["esxi_info"]["numCpuThreads"] = esxi.summary.hardware.numCpuThreads
-            self._esxis_info[esxi.name]["esxi_info"]["numNics"] = esxi.summary.hardware.numNics
-            self._esxis_info[esxi.name]["esxi_info"]["numHBAs"] = esxi.summary.hardware.numHBAs
-            self._get_esxi_datastore_info(esxi)
-            self._get_esxi_network_info(esxi)
+            try:
+                logging.info("Trying to get ESXi %s "
+                             "info: %s" % (esxi.name, esxi))
+
+                self._esxis_info[esxi.name] = {
+                    "esxi_info": self._get_esxi_summary(esxi),
+                    "datastore": self._get_esxi_datastore_info(esxi),
+                    "network": self._get_esxi_network_info(esxi) 
+                }
+            except Exception as e:
+                logging.info("Failed to get ESXi %s" % esxi.name)
+                logging.exception(e)
+                self.failed_esxis.append(esxi.name)
+
         logging.info("Get %s esxis host info successful." % esxi.name)
 
+    def _get_esxi_summary(self, esxi):
+        summary = esxi.summary
+        logging.info("Trying to get ESXi %s "
+                     "summary %s..." % (esxi.name, summary))
+
+        esxi_info = {
+            "vendor": summary.hardware.vendor,
+            "model" : summary.hardware.model,
+            "port" : summary.config.port,
+            "fullName" : summary.config.product.fullName,
+            "version" : summary.config.product.version,
+            "build" : summary.config.product.build,
+            "osType" : summary.config.product.osType,
+            "licenseProductName" : summary.config.product.licenseProductName,
+            "licenseProductVersion" : summary.config.product.licenseProductVersion,
+            "MemorySize" : summary.hardware.memorySize / 1024 / 1024,
+            "cpuModel" : summary.hardware.cpuModel,
+            "cpuMhz" : summary.hardware.cpuMhz,
+            "numCpuPkgs" : summary.hardware.numCpuPkgs,
+            "numCpuCores" : summary.hardware.numCpuCores,
+            "numCpuThreads" : summary.hardware.numCpuThreads,
+            "numNics" : summary.hardware.numNics,
+            "numHBAs" : summary.hardware.numHBAs
+        }
+
+        for i in esxi.summary.hardware.otherIdentifyingInfo:
+            if isinstance(i, vim.host.SystemIdentificationInfo):
+                esxi_info["SN"] = i.identifierValue
+
+        logging.info("Success to get ESXi %s "
+                     "summary: %s" % (esxi.name, esxi_info))
+
+        return esxi_info
+
     def _get_esxi_network_info(self, esxi):
-        logging.info("Start get %s esxi host network info." % esxi.name)
+        logging.info("Trying to get ESXi %s "
+                     "network info: %s" % (esxi.name, esxi.network))
+
+        # TODO(Ray): Need to double check if this works for
+        # distribution network type
+        network_info = {}
         for nt in esxi.network:
-            self._esxis_info[esxi.name]["network"][nt.name] = {}
-            self._esxis_info[esxi.name]["network"][nt.name]["name"] = nt.summary.name
-            self._esxis_info[esxi.name]["network"][nt.name]["accessible"] = nt.summary.accessible
-            self._esxis_info[esxi.name]["network"][nt.name]["ipPoolName"] = nt.summary.ipPoolName
-            logging.debug("Get %s esxi host network info %s."
-                          % (esxi.name, self._esxis_info[esxi.name]["network"]))
-        logging.info("Get %s esxi host network info successful." % esxi.name)
+            logging.debug("Current network is %s" % nt)
+            network_info[nt.name] = {
+                "name" : nt.summary.name,
+                "accessible" : nt.summary.accessible,
+                "ipPoolName" : nt.summary.ipPoolName
+            }
+            logging.debug("Success to get current "
+                          "network info: %s" % network_info[nt.name])
+
+        logging.info("Success to get ESXi %s "
+                     "network %s" % (esxi.name, network_info))
 
     def _get_esxi_datastore_info(self, esxi):
-        logging.info("Start get %s esxi host datastore info." % esxi.name)
+        logging.info("Trying to get ESXi %s "
+                     "datastore info: %s" % (
+                         esxi.name, esxi.datastore))
+
+        # TODO(Ray): Need to double check if the logical works for
+        # RDM or other storage types
+        datastore_info = {}
         for ds in esxi.datastore:
-            self._esxis_info[esxi.name]["datastore"][ds.name] = {}
-            self._esxis_info[esxi.name]["datastore"][ds.name]["capacity"] = ds.summary.capacity
-            self._esxis_info[esxi.name]["datastore"][ds.name]["freeSpace"] = ds.summary.freeSpace
-            self._esxis_info[esxi.name]["datastore"][ds.name]["type"] = ds.summary.type
-            self._esxis_info[esxi.name]["datastore"][ds.name]["name"] = ds.summary.name
-            self._esxis_info[esxi.name]["datastore"][ds.name]["url"] = ds.summary.url
-            self._esxis_info[esxi.name]["datastore"][ds.name]["accessible"] = ds.summary.accessible
-            self._esxis_info[esxi.name]["datastore"][ds.name]["uncommitted"] = ds.summary.uncommitted
-            self._esxis_info[esxi.name]["datastore"][ds.name]["multipleHostAccess"] = ds.summary.multipleHostAccess
-            self._esxis_info[esxi.name]["datastore"][ds.name]["maintenanceMode"] = ds.summary.maintenanceMode
-            self._esxis_info[esxi.name]["datastore"][ds.name]["maxVirtualDiskCapacity"] = ds.info.maxVirtualDiskCapacity
-            self._esxis_info[esxi.name]["datastore"][ds.name]["maxMemoryFileSize"] = ds.info.maxMemoryFileSize
-            self._esxis_info[esxi.name]["datastore"][ds.name]["maxPhysicalRDMFileSize"] = ds.info.maxPhysicalRDMFileSize
-            self._esxis_info[esxi.name]["datastore"][ds.name]["maxVirtualRDMFileSize"] = ds.info.maxVirtualRDMFileSize
-            self._esxis_info[esxi.name]["datastore"][ds.name]["blockSizeMb"] = ds.info.vmfs.blockSizeMb
-            self._esxis_info[esxi.name]["datastore"][ds.name]["maxFileSize"] = ds.info.maxFileSize
-            self._esxis_info[esxi.name]["datastore"][ds.name]["ssd"] = ds.info.vmfs.ssd
-            self._esxis_info[esxi.name]["datastore"][ds.name]["local"] = ds.info.vmfs.local
-            logging.debug("Get %s esxi host datastore info %s."
-                          % (esxi.name, self._esxis_info[esxi.name]["datastore"]))
-        logging.info("Get %s esxi host datastore info successful." % esxi.name)
+            logging.debug("Current datastore is %s" % ds)
+            datastore_info[ds.name] = {
+                "capacity" : ds.summary.capacity,
+                "freeSpace" : ds.summary.freeSpace,
+                "type" : ds.summary.type,
+                "name" : ds.summary.name,
+                "url" : ds.summary.url,
+                "accessible" : ds.summary.accessible,
+                "uncommitted" : ds.summary.uncommitted,
+                "multipleHostAccess" : ds.summary.multipleHostAccess,
+                "maintenanceMode" : ds.summary.maintenanceMode,
+                "maxVirtualDiskCapacity" : ds.info.maxVirtualDiskCapacity,
+                "maxMemoryFileSize" : ds.info.maxMemoryFileSize,
+                "maxPhysicalRDMFileSize" : getattr(ds.info, "getkmaxPhysicalRDMFileSize", ""),
+                "maxVirtualRDMFileSize" : getattr(ds.info, "maxVirtualRDMFileSize", ""),
+                "blockSizeMb" : getattr(ds.info, "vmfs.blockSizeMb", ""),
+                "maxFileSize" : ds.info.maxFileSize,
+                "ssd" : getattr(ds.info, "vmfs.ssd", ""),
+                "local" : getattr(ds.info, "vmfs.local", "")
+            }
+            logging.debug("Success to get current datastore "
+                          "info: %s" % datastore_info[ds.name])
+
+        logging.info("Success to get ESXi %s datastore "
+                     "info: %s" % (esxi.name, datastore_info))
 
 
 class VMwareHostReport(object):

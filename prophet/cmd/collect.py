@@ -3,7 +3,7 @@
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright 2019 OnePro Cloud (Shanghai) Ltd.
+# Copyright 2021 OnePro Cloud (Shanghai) Ltd.
 #
 # Authors: Ray <ray.sun@oneprocloud.com>
 #
@@ -22,31 +22,26 @@ import time
 from prophet.controller.network import NetworkController
 from prophet.controller.batch_job import BatchJob
 
-VER = "1.0.0 Beta"
+VER = "1.1.0 Beta"
+
+# Default log name
+LOG_FILE = "prophet.log"
 
 def log_init(debug=False, verbose=False, log_path=None):
     """Set up global logs"""
     log_format = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
-    log_level = logging.INFO
+    log_level = logging.DEBUG if debug else logging.INFO
 
-    if debug:
-        log_level = logging.DEBUG
+    # Always write log file
+    log_file = os.path.join(log_path, LOG_FILE)
+
+    logging.basicConfig(
+        format=log_format,
+        level=log_level,
+        filename=log_file)
  
     if verbose:
-        logging.basicConfig(
-                format=log_format,
-                level=log_level)
-    else:
-        if log_path:
-            log_file = os.path.join(log_path, "prophet.log")
-            logging.basicConfig(
-                format=log_format,
-                level=log_level,
-                filename=log_file)
-        else:
-            logging.basicConfig(
-                format=log_format,
-                level=log_level)
+        logging.getLogger().addHandler(logging.StreamHandler())
 
 def scan_network(args):
     host = args.host
@@ -76,7 +71,7 @@ def parse_sys_args(argv):
             dest="debug", default=False,
             help="Enable debug message.")
     parser.add_argument("-v", "--verbose", action="store_true",
-            dest="verbose", default=False,
+            dest="verbose", default=True,
             help="Show message in standard output.")
 
     subparsers = parser.add_subparsers(title='Avaliable commands')
