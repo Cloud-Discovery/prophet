@@ -1,11 +1,17 @@
-FROM 192.168.10.10/hypermotion/base:latest
+FROM centos:7
 
-MAINTAINER Chen Chunzai <chenchunzai@oneprocloud.com>
+MAINTAINER Ray Sun <ray.sun@oneprocloud.com>
 
-COPY ./etc/pip/ /root/.pip/
-COPY ./tools/wmi-1.3.14-4.el7.art.x86_64.rpm /tmp
-COPY ./etc/repo/hypermotion.repo /etc/yum.repos.d/hypermotion.repo
+ENV LANG en_US.UTF-8
+
 COPY ./ /opt/prophet
+WORKDIR /opt/prophet
 
-# Install prophet
-RUN pip install -e /opt/prophet && yum install -y nmap && yum install -y /tmp/wmi-1.3.14-4.el7.art.x86_64.rpm
+RUN mv /opt/prophet/etc/pip /root/.pip && \
+    yum -y install epel-release && \
+    yum clean all && yum makecache && \
+    yum -y install gcc python2-pip python-devel python-pbr && \
+    pip install pip==9.0.3 && \
+    yum install -y nmap && \
+    yum install -y /opt/prophet/tools/wmi-1.3.14-4.el7.art.x86_64.rpm && \
+    pip install -e /opt/prophet

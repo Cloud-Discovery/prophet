@@ -174,10 +174,19 @@ class VMwareHostController(object):
         After that get all VMs and save to files.
         """
 
+        vmware_info = {}
         server_type = "_exsi"
+
+        self._get_esxi_info()
+
         if self._content.about.name == "VMware vCenter Server":
             server_type = "_vcenter"
             self._get_vcenter_info()
+            self._vc_info[self.host]["esxi"] = self._esxis_info
+            vmware_info = self._vc_info
+        else:
+            vmware_info = self._esxis_info
+
 
         # Write connection information to host_<type>.cfg
         self._write_file_yaml(
@@ -186,11 +195,12 @@ class VMwareHostController(object):
             suffix=server_type,
             filetype="cfg")
 
-        try:
-            self._get_esxi_info()
-            success_esxis.append()
-        except Exception as e:
-            logging.warn("Failed to get ESXi ")
+        # Save vCenter and ESxi into yaml file
+        self._write_file_yaml(
+            self.output_path, self.host,
+            vmware_info, suffix=server_type)
+
+
 
 
 
