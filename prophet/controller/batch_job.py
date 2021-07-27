@@ -10,6 +10,7 @@
 
 """Batch job for running mix host type collection"""
 
+import glob
 import logging
 import os
 import shutil
@@ -215,6 +216,15 @@ class BatchJob(object):
     def package(self):
         # Clean sensitive file before package
         self._clean()
+
+        # Also package runtime log file into package
+        logging.info("Copying log file into collection info path...")
+        log_path = os.path.abspath(
+                os.path.join(self.coll_path, os.pardir))
+        log_files = "%s/*.log" % log_path
+        for f in glob.glob(log_files):
+            logging.info("Copying %s to %s..." % (f, self.coll_path))
+            shutil.copy(f, self.coll_path)
 
         logging.info("Packing of collection info path %s to %s..."
                      % (self.coll_path, self.report_full_path))

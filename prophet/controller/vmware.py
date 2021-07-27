@@ -129,25 +129,25 @@ class VMwareHostController(object):
         try:
             self._vc_info[self.host] = {
                 "name": getattr(self._content, "about.name", ""),
-                "fullName" : getattr(self._content, "about.fullName", ""),
-                "vendor" : getattr(self._content, "about.vendor", ""),
-                "version" : getattr(self._content, "about.version", ""),
-                "build" : getattr(self._content, "about.build", ""),
-                "localeVersion" : getattr(
+                "fullName": getattr(self._content, "about.fullName", ""),
+                "vendor": getattr(self._content, "about.vendor", ""),
+                "version": getattr(self._content, "about.version", ""),
+                "build": getattr(self._content, "about.build", ""),
+                "localeVersion": getattr(
                     self._content, "about.localeVersion", ""),
-                "localeBuild" : getattr(
+                "localeBuild": getattr(
                     self._content, "about.localeBuild", ""),
-                "osType" : getattr(self._content, "about.osType", ""),
-                "productLineId" : getattr(
+                "osType": getattr(self._content, "about.osType", ""),
+                "productLineId": getattr(
                     self._content, "about.productLineId", ""),
-                "apiType" : getattr(self._content, "about.apiType", ""),
-                "apiVersion" : getattr(
+                "apiType": getattr(self._content, "about.apiType", ""),
+                "apiVersion": getattr(
                     self._content, "about.apiVersion", ""),
-                "instanceUuid" : getattr(
+                "instanceUuid": getattr(
                     self._content, "about.instanceUuid", ""),
-                "licenseProductName" : getattr(
+                "licenseProductName": getattr(
                     self._content, "about.licenseProductName", ""),
-                "licenseProductVersion" : getattr(
+                "licenseProductVersion": getattr(
                     self._content, "about.licenseProductVersion", "")
             }
             self.success_vcs.append(self.host)
@@ -177,8 +177,10 @@ class VMwareHostController(object):
         vmware_info = {}
         server_type = "_exsi"
 
+        # Get ESXi information
         self._get_esxi_info()
 
+        # If the given address is vCenter, also get vCenter infromation
         if self._content.about.name == "VMware vCenter Server":
             server_type = "_vcenter"
             self._get_vcenter_info()
@@ -186,7 +188,6 @@ class VMwareHostController(object):
             vmware_info = self._vc_info
         else:
             vmware_info = self._esxis_info
-
 
         # Write connection information to host_<type>.cfg
         self._write_file_yaml(
@@ -200,42 +201,32 @@ class VMwareHostController(object):
             self.output_path, self.host,
             vmware_info, suffix=server_type)
 
-
-
-
-
-
-        #if self._content.about.name == "VMware vCenter Server":
-        #    server_type = "_vcenter"
-        #    self._get_vcenter_info()
-        #    self._get_esxi_info()
-        #    self._vc_info[self.host]["esxi"] = self._esxis_info
-
-        #    # Save vCenter and esxi info
-        #    self._write_file_yaml(
-        #        self.output_path, self.host,
-        #        self._vc_info, suffix=server_type)
-        #else:
-        #    server_type = "_exsi"
-        #    self._get_esxi_info()
-
-        #    # only save esxi info
-        #    self._write_file_yaml(
-        #        self.output_path, self.host,
-        #        self._esxis_info, suffix=server_type)
-
-        #self._write_file_yaml(
-        #    self.output_path, "host",
-        #    self._connect_info,
-        #    suffix=server_type,
-        #    filetype="cfg")
-
         self._get_vms_info()
 
         logging.info("===========VMware Summary==========")
         logging.info("===================================")
 
-    def _get_disk_info(self, vm):
+    def _get_vm_datastore_info(self, vm):
+        datastore_info = {}
+
+        logging.info("Trying to get VM %s datastore..." % (
+            vm.config.name))
+        for dsurl in vm.config.datastoreUrl:
+            logging.info("Current datastore: %s" % dsurl)
+            datastore_name = dsurl.name
+            datastore_info[datastore_name] = {
+                "url": dsurl.url
+            }
+            #self._vms_info[vmid]["datastoreurl"] = {datastore_name: {}}
+            #self._vms_info[vmid]["datastoreurl"][datastore_name]["url"] = dsurl.url
+        #disks_info = self._get_vm_disk_info(vm)
+        #self._vms_info[vmid]["disks_info"] = disks_info
+        logging.info("Success to get VM %s datastore: %s" % (
+            vm.config.name, datastore_info))
+
+        return datastore_info
+
+    def _get_vm_disks_info(self, vm):
         disk_info = {}
         vdisk_types = [
             vim.VirtualDiskFlatVer1BackingInfo,
@@ -244,46 +235,69 @@ class VMwareHostController(object):
             vim.VirtualDiskSparseVer2BackingInfo,
             vim.VirtualDiskRawDiskMappingVer1BackingInfo,
         ]
-        logging.info("Start get %s vm disk info." % vm.config.name)
+        logging.info("Trying to get %s vm "
+                     "disk info..." % vm.config.name)
         for dev in vm.config.hardware.device:
+            logging.info("Current disk is %s" % dev)
+
+            # skip if not VirtualDisk
             if not isinstance(dev, vim.VirtualDisk):
+                logging.warn("Current disk is not "
+                             "instance of VirtualDisk")
                 continue
+
             back_info = dev.backing
-            if not isinstance(back_info, vim.VirtualDeviceFileBackingInfo):
+            if not isinstance(back_info,
+                              vim.VirtualDeviceFileBackingInfo):
                 result = "non-file backing virtual disk exists"
                 logging.warning(result)
                 disk_info["backing"] = result
                 continue
-            if not any(map(lambda ty: isinstance(back_info, ty), vdisk_types)):
-                result = ("Contain unsuported backing type: %s"
+            # Query if disks in virtual types
+            if not any(map(lambda ty: isinstance(
+                back_info, ty), vdisk_types)):
+                result = ("Unsuported backing type: %s"
                           % back_info.__name__)
                 disk_info["backing"] = result
                 continue
-            diskuuid = dev.backing.uuid
-            disk_info[diskuuid] = {}
-            disk_info[diskuuid]["capacityInKB"] = \
-                dev.capacityInKB
-            disk_info[diskuuid]["fileName"] = \
-                dev.backing.fileName
-            disk_info[diskuuid]["diskMode"] = \
-                dev.backing.diskMode
-            disk_info[diskuuid]["thinProvisioned"] = \
-                dev.backing.thinProvisioned
-            disk_info[diskuuid]["contentId"] = \
-                dev.backing.contentId
-            disk_info[diskuuid]["changeId"] = \
-                dev.backing.changeId
-            disk_info[diskuuid]["deltaDiskFormat"] = \
-                dev.backing.deltaDiskFormat
-            logging.debug("Get %s vm disk %s info."
-                          % (vm.config.name, disk_info))
-        logging.info("Get %s vm all disks info successful." % vm.config.name)
+
+            disk_info[dev.backing.uuid] = {
+                "capacityInKB": dev.capacityInKB,
+                "fileName":  dev.backing.fileName,
+                "diskMode":  dev.backing.diskMode,
+                "thinProvisioned": dev.backing.thinProvisioned,
+                "contentId":  dev.backing.contentId,
+                "changeId": dev.backing.changeId,
+                "deltaDiskFormat": dev.backing.deltaDiskFormat
+            }
+            #diskuuid = dev.backing.uuid
+            #disk_info[diskuuid] = {}
+            #disk_info[diskuuid]["capacityInKB"] = \
+            #    dev.capacityInKB
+            #disk_info[diskuuid]["fileName"] = \
+            #    dev.backing.fileName
+            #disk_info[diskuuid]["diskMode"] = \
+            #    dev.backing.diskMode
+            #disk_info[diskuuid]["thinProvisioned"] = \
+            #    dev.backing.thinProvisioned
+            #disk_info[diskuuid]["contentId"] = \
+            #    dev.backing.contentId
+            #disk_info[diskuuid]["changeId"] = \
+            #    dev.backing.changeId
+            #disk_info[diskuuid]["deltaDiskFormat"] = \
+            #    dev.backing.deltaDiskFormat
+
+        logging.info("Success to get %s disk "
+                     "info: %s" % (vm.config.name, disk_info))
+
         return disk_info
 
-    def _get_network_info(self, vm):
+    def _get_vm_network_info(self, vm):
         network_info = {}
-        logging.info("Start get %s network info." % vm.config.name)
-        logging.debug("vm.config.hardware.device = %s" % vm.config.hardware.device)
+        logging.info("Start to get %s "
+                     "network info." % vm.config.name)
+        logging.debug("vm.config.hardware."
+                      "device = %s" % vm.config.hardware.device)
 
         for dev in vm.config.hardware.device:
 
@@ -303,10 +317,12 @@ class VMwareHostController(object):
                 addr = dev.backing.network.summary.ipPoolId
 
             nt = dev.backing.network
-            network_info[nt_uuid]["macAddress"] = dev.macAddress
-            network_info[nt_uuid]["accessible"] = nt.summary.accessible
-            network_info[nt_uuid]["deviceName"] = nt.summary.name
-            network_info[nt_uuid]["ipPoolId"] = addr
+            network_info[nt_uuid] = {
+                "macAddress": dev.macAddress,
+                "accessible": nt.summary.accessible,
+                "deviceName": nt.summary.name,
+                "ipPoolId": addr
+            }
             logging.debug("Get %s vm network %s info."
                           % (vm.config.name, network_info))
 
@@ -314,67 +330,97 @@ class VMwareHostController(object):
         return network_info
 
     def _get_vms_info(self):
-        esxi_obj = self._get_content_obj(self._content, [vim.HostSystem])
-        vms_obj = self._get_content_obj(self._content, [vim.VirtualMachine])
-        cluster_obj = self._get_content_obj(self._content, [vim.ClusterComputeResource])
+        logging.info("Trying to get VMs details...")
+
+        esxi_obj = self._get_content_obj(
+                self._content, [vim.HostSystem])
+        cluster_obj = self._get_content_obj(
+                self._content, [vim.ClusterComputeResource])
+        vms_obj = self._get_content_obj(
+                self._content, [vim.VirtualMachine])
+        logging.debug("VMs object: %s" % vms_obj)
+
+        logging.info("VMs total count is %s" % len(vms_obj))
+        for vm in vms_obj:
+            vms_info = {}
+            logging.info("VM object is: %s" % vm)
+            if vm.summary.runtime.host in esxi_obj:
+                vmid = vm.config.instanceUuid
+                vms_info[vmid] = self._get_vm_info(
+                        esxi_obj, cluster_obj, vm)
+            else:
+                logging.warn(
+                        "VM object %s is not "
+                        "in esxi object, skipping..." % (
+                            vm.runtime.summary.runtime))
+
+            logging.info("Success to get VM %s info" % vm.config.name)
+            self._write_file_yaml(
+                self.output_path, vm.config.name, vms_info)
+            
+
+    def _get_vm_info(self, esxi_obj, cluster_obj, vm):
+        """Get VM summary information"""
+        vm_info = {}
         drs = False
         ha = False
+
+        obj_index = esxi_obj.index(vm.summary.runtime.host)
+        esxi_host = esxi_obj[obj_index].name
+
+        ha, drs = self._is_ha_drs_enabled(cluster_obj)
+
+        vm_info = {
+            "esxi_host": esxi_host,
+            "name": vm.config.name,
+            "memoryMB": vm.config.hardware.memoryMB,
+            "numCpu": vm.config.hardware.numCPU,
+            "numCoresPerSocket": vm.config.hardware.numCoresPerSocket,
+            "numEthernetCards": vm.summary.config.numEthernetCards,
+            "powerState": vm.runtime.powerState,
+            "numVirtualDisks": vm.summary.config.numVirtualDisks,
+            "uuid": vm.config.uuid,
+            "locationId": vm.config.locationId,
+            "guestId": vm.config.guestId,
+            "guestFullName": vm.config.guestFullName,
+            "version": vm.config.version,
+            "firmware": vm.config.firmware,
+            "vmPathName": vm.config.files.vmPathName,
+            "toolsStatus": vm.summary.guest.toolsStatus,
+            "ipAddress": vm.summary.guest.ipAddress,
+            "hostName": vm.summary.guest.hostName,
+            "toolsVersion": vm.config.tools.toolsVersion,
+            "snapshotDirectory": vm.config.files.snapshotDirectory,
+            "suspendDirectory": vm.config.files.suspendDirectory,
+            "logDirectory": vm.config.files.logDirectory,
+            "changeTrackingSupported": vm.capability.changeTrackingSupported,
+            "network": self._get_vm_network_info(vm),
+            "datastoreurl": self._get_vm_datastore_info(vm),
+            "disks_info": self._get_vm_disks_info(vm),
+            "ha": ha,
+            "drs": drs
+        }
+
+        return vm_info
+
+    def _is_ha_drs_enabled(self, cluster_obj):
+        # TODO(Ray): Check if HA or DRS is enable, but seems it's not
+        # correct if there are multiple clusters, need to double check
+        # this logical
+        ha = False
+        drs = False
+
+        logging.info("Checking if cluster HA or DRS is enabled...")
         for c in cluster_obj:
-            if hasattr(c, 'configuration'):
+            logging.info("Current cluster detailed: %s" % c)
+            if hasattr(c, "configuration"):
                 if c.configuration.drsConfig.enabled:
                     drs = True
                 if c.configuration.dasConfig.enabled:
                     ha = True
                 break
-        logging.info("Start get %s esxi all vms info." % esxi_obj)
-        logging.debug("Get %s number vm in VCenter." % len(vms_obj))
-        for vm in vms_obj:
-            if vm.summary.runtime.host in esxi_obj:
-                obj_index = esxi_obj.index(vm.summary.runtime.host)
-                esxi_host = esxi_obj[obj_index].name
-                vmid = vm.config.instanceUuid
-                # if 'stress-testing' in vm.config.name:
-                #     continue
-                self._vms_info[vmid] = {"esxi_host": esxi_host}
-                self._vms_info[vmid]["name"] = vm.config.name
-                self._vms_info[vmid]["memoryMB"] = vm.config.hardware.memoryMB
-                self._vms_info[vmid]["numCpu"] = vm.config.hardware.numCPU
-                self._vms_info[vmid]["numCoresPerSocket"] = vm.config.hardware.numCoresPerSocket
-                self._vms_info[vmid]["numEthernetCards"] = vm.summary.config.numEthernetCards
-                self._vms_info[vmid]["powerState"] = vm.runtime.powerState
-                self._vms_info[vmid]["numVirtualDisks"] = vm.summary.config.numVirtualDisks
-                self._vms_info[vmid]["uuid"] = vm.config.uuid
-                self._vms_info[vmid]["locationId"] = vm.config.locationId
-                self._vms_info[vmid]["guestId"] = vm.config.guestId
-                self._vms_info[vmid]["guestFullName"] = vm.config.guestFullName
-                self._vms_info[vmid]["version"] = vm.config.version
-                self._vms_info[vmid]["firmware"] = vm.config.firmware
-                self._vms_info[vmid]["vmPathName"] = vm.config.files.vmPathName
-                self._vms_info[vmid]["toolsStatus"] = vm.summary.guest.toolsStatus
-                self._vms_info[vmid]["ipAddress"] = vm.summary.guest.ipAddress
-                self._vms_info[vmid]["hostName"] = vm.summary.guest.hostName
-                self._vms_info[vmid]["toolsVersion"] = vm.config.tools.toolsVersion
-                self._vms_info[vmid]["snapshotDirectory"] = vm.config.files.snapshotDirectory
-                self._vms_info[vmid]["suspendDirectory"] = vm.config.files.suspendDirectory
-                self._vms_info[vmid]["logDirectory"] = vm.config.files.logDirectory
-                self._vms_info[vmid]["changeTrackingSupported"] = vm.capability.changeTrackingSupported
-                networks_info = self._get_network_info(vm)
-                self._vms_info[vmid]["network"] = networks_info
-                self._vms_info[vmid]['drs'] = drs
-                self._vms_info[vmid]['ha'] = ha
-                for dsurl in vm.config.datastoreUrl:
-                    datastore_name = dsurl.name
-                    self._vms_info[vmid]["datastoreurl"] = {datastore_name: {}}
-                    self._vms_info[vmid]["datastoreurl"][datastore_name]["url"] = dsurl.url
-                    logging.debug("Get %s esxi vm info %s."
-                                  % (esxi_host, self._vms_info[vmid]["datastoreurl"]))
-                disks_info = self._get_disk_info(vm)
-                self._vms_info[vmid]["disks_info"] = disks_info
-            logging.info("Get %s esxi host %s vms info successful."
-                         % (esxi_host, vm.config.name))
-            self._write_file_yaml(
-                self.output_path, vm.config.name, self._vms_info)
-            self._vms_info = {}
+        logging.info("HA enable is %s, DRS enable is %s" % (ha, drs))
+        return ha, drs
 
     def _write_file_yaml(self, output_path, filename, values,
                          suffix="_vmware", filetype="yaml"):
