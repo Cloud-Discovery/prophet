@@ -201,10 +201,29 @@ class VMwareHostController(object):
             self.output_path, self.host,
             vmware_info, suffix=server_type)
 
+        # Begin to collect all VMs
         self._get_vms_info()
 
-        logging.info("===========VMware Summary==========")
-        logging.info("===================================")
+    def show_collection_report(self):
+        logging.info("----------VMware Summary----------")
+        self._generate_report(
+                "vCenter", self.success_vcs, self.failed_vcs)
+        self._generate_report(
+                "ESXi", self.success_esxis, self.failed_esxis)
+        self._generate_report(
+                "VM", self.success_vms, self.failed_vms)
+
+    def _generate_report(self, item_name, success_items, failed_items):
+        if success_items or failed_items:
+            logging.info(
+                    "%s Collection Result: "
+                    "Success %s, Failed %s" % (
+                        item_name,
+                        len(success_items),
+                        len(failed_items)))
+            logging.debug("Success Detailed: %s" % success_items)
+            logging.info("Failed Detailed: %s" % failed_items)
+            logging.info("----------------------------------")
 
     def _get_vm_datastore_info(self, vm):
         datastore_info = {}
@@ -330,7 +349,7 @@ class VMwareHostController(object):
         return network_info
 
     def _get_vms_info(self):
-        logging.info("Trying to get VMs details...")
+        logging.info("Trying to get VMs detail...")
 
         esxi_obj = self._get_content_obj(
                 self._content, [vim.HostSystem])
@@ -340,23 +359,45 @@ class VMwareHostController(object):
                 self._content, [vim.VirtualMachine])
         logging.debug("VMs object: %s" % vms_obj)
 
-        logging.info("VMs total count is %s" % len(vms_obj))
+        logging.info("Trying to get VMs total "
+                     "count is %s" % len(vms_obj))
         for vm in vms_obj:
             vms_info = {}
-            logging.info("VM object is: %s" % vm)
-            if vm.summary.runtime.host in esxi_obj:
-                vmid = vm.config.instanceUuid
-                vms_info[vmid] = self._get_vm_info(
-                        esxi_obj, cluster_obj, vm)
-            else:
-                logging.warn(
-                        "VM object %s is not "
-                        "in esxi object, skipping..." % (
-                            vm.runtime.summary.runtime))
 
-            logging.info("Success to get VM %s info" % vm.config.name)
-            self._write_file_yaml(
-                self.output_path, vm.config.name, vms_info)
+            # NOTE(Ray): vm.config is very important when we try to
+            # get data, we found some fields is missing in some env.
+            # So we log this object into log file for further analysis
+            logging.info("VM config object is: %s" % vm.config)
+            try:
+                vm_name = vm.config.name
+                vm_host = vm.summary.runtime.host
+
+                logging.info("Trying to get VM %s info..." % vm_name)
+
+                if vm_host in esxi_obj:
+                    # NOTE(Ray): Normally instanceUuid should be
+                    # exsits in vm.config, but we found in some real
+                    # env, it's not true. To work around, we get this
+                    # value from vm.config.summary
+                    vmid = getattr(vm, "config.instanceUuid", getattr(
+                        vm, "config.summary.instanceUuid", None))
+                    vms_info[vmid] = self._get_vm_info(
+                            esxi_obj, cluster_obj, vm)
+                else:
+                    logging.warn(
+                            "Skip to get VM %s info, due to VM "
+                            "is in ESXi host %s" % (vm_name, vm_host))
+
+                logging.info(
+                        "Success to get VM %s info" % vm_name)
+                self._write_file_yaml(
+                    self.output_path, vm.config.name, vms_info)
+
+                self.success_vms.append(vm_name)
+            except Exception as e:
+                self.failed_vms.append(vm_name)
+                logging.warn("Skip to get VM %s info, due to:")
+                logging.exception(e)
             
 
     def _get_vm_info(self, esxi_obj, cluster_obj, vm):

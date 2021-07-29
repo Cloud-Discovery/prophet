@@ -211,6 +211,9 @@ class BatchJob(object):
         if failed_hosts:
             logging.info("Failed hosts: %s" % failed_hosts)
 
+        if collect_os_type == VMWARE:
+            host_info.show_collection_report()
+
         logging.info("============================")
 
     def package(self):
