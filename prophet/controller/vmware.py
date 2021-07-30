@@ -363,24 +363,32 @@ class VMwareHostController(object):
                      "count is %s" % len(vms_obj))
         for vm in vms_obj:
             vms_info = {}
+            vm_name = None
 
+            logging.info("Current vm object is %s" % vm)
             # NOTE(Ray): vm.config is very important when we try to
             # get data, we found some fields is missing in some env.
             # So we log this object into log file for further analysis
             logging.info("VM config object is: %s" % vm.config)
+
             try:
-                vm_name = vm.config.name
+                # NOTE(Ray): Normally instanceUuid should be
+                # exsits in vm.config, but we found in some real
+                # env, it's not true. To work around, we get this
+                # value from vm.config.summary
+                # To use vim-cmd vmsvc/getallvms to search the id, return
+                # Invalid VM 'id', so we no need to care about this kind
+                # of situation, just skip it
+                vmid = getattr(vm.config, "instanceUuid", getattr(
+                    vm.config, "summary.instanceUuid", None))
+                vm_name = getattr(vm.config, "name", getattr(
+                    vm.config, "summary.name"), vmid)
+
                 vm_host = vm.summary.runtime.host
 
                 logging.info("Trying to get VM %s info..." % vm_name)
 
                 if vm_host in esxi_obj:
-                    # NOTE(Ray): Normally instanceUuid should be
-                    # exsits in vm.config, but we found in some real
-                    # env, it's not true. To work around, we get this
-                    # value from vm.config.summary
-                    vmid = getattr(vm, "config.instanceUuid", getattr(
-                        vm, "config.summary.instanceUuid", None))
                     vms_info[vmid] = self._get_vm_info(
                             esxi_obj, cluster_obj, vm)
                 else:

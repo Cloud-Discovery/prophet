@@ -128,6 +128,9 @@ class GenerateMac(object):
                 keys = [k for k in val['network'].keys()]
                 # Get default mac
                 keys.sort()
-            mac = val['network'][keys[0]]['macAddress']
+            if getattr(val, "network", None):
+                mac = val['network'][keys[0]]['macAddress']
+            else:
+                mac = None
             ip = None
         return mac, ip
