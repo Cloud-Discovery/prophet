@@ -381,8 +381,7 @@ class VMwareHostController(object):
                 # of situation, just skip it
                 vmid = getattr(vm.config, "instanceUuid", getattr(
                     vm.config, "summary.instanceUuid", None))
-                vm_name = getattr(vm.config, "name", getattr(
-                    vm.config, "summary.name"), vmid)
+                vm_name = getattr(vm.config, "name", vmid)
 
                 vm_host = vm.summary.runtime.host
 
