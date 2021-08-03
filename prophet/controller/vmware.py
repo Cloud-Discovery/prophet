@@ -333,13 +333,22 @@ class VMwareHostController(object):
             if isinstance(
                     dev.backing,
                     vim.VirtualEthernetCardNetworkBackingInfo):
-                addr = dev.backing.network.summary.ipPoolId
+                addr = getattr(
+                        dev.backing, "network.summary.ipPoolId", None)
 
-            nt = dev.backing.network
+            logging.info("Current dev.backing is: %s" % dev.backing)
+            device_name = getattr(
+                    dev.backing, "deviceName", None)
+            # if contains distribution network
+            if isinstance(
+                    dev.backing,
+                    vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
+                device_name = getattr(
+                        dev.backing.port, "portgroupKey", None)
+
             network_info[nt_uuid] = {
                 "macAddress": dev.macAddress,
-                "accessible": nt.summary.accessible,
-                "deviceName": nt.summary.name,
+                "deviceName": device_name,
                 "ipPoolId": addr
             }
             logging.debug("Get %s vm network %s info."

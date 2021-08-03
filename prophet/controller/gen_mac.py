@@ -123,14 +123,11 @@ class GenerateMac(object):
                     ip = networkadpt[0]['IPAddress']
                     ip = ip.replace("(", "").replace(")", "")
         elif data_type == VMWARE_YAML_FORMAT:
-            # Fetch mac from vmware API result
-            for _, val in data.iteritems():
-                keys = [k for k in val['network'].keys()]
-                # Get default mac
-                keys.sort()
-            if getattr(val, "network", None):
-                mac = val['network'][keys[0]]['macAddress']
-            else:
-                mac = None
-            ip = None
+            for item, values in data.iteritems():
+                logging.info("network: %s" % values["network"])
+                for uuid, nets in values["network"].iteritems():
+                    logging.info("Current network is %s" % nets)
+                    mac = nets.get("macAddress")
+                    break
+
         return mac, ip
