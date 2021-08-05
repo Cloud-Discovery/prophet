@@ -284,27 +284,13 @@ class VMwareHostController(object):
                 "capacityInKB": dev.capacityInKB,
                 "fileName":  dev.backing.fileName,
                 "diskMode":  dev.backing.diskMode,
-                "thinProvisioned": dev.backing.thinProvisioned,
+                "thinProvisioned": getattr(
+                    dev.backing, "thinProvisioned", False),
                 "contentId":  dev.backing.contentId,
                 "changeId": dev.backing.changeId,
-                "deltaDiskFormat": dev.backing.deltaDiskFormat
+                "deltaDiskFormat": getattr(
+                    dev.backing, "deltaDiskFormat", False)
             }
-            #diskuuid = dev.backing.uuid
-            #disk_info[diskuuid] = {}
-            #disk_info[diskuuid]["capacityInKB"] = \
-            #    dev.capacityInKB
-            #disk_info[diskuuid]["fileName"] = \
-            #    dev.backing.fileName
-            #disk_info[diskuuid]["diskMode"] = \
-            #    dev.backing.diskMode
-            #disk_info[diskuuid]["thinProvisioned"] = \
-            #    dev.backing.thinProvisioned
-            #disk_info[diskuuid]["contentId"] = \
-            #    dev.backing.contentId
-            #disk_info[diskuuid]["changeId"] = \
-            #    dev.backing.changeId
-            #disk_info[diskuuid]["deltaDiskFormat"] = \
-            #    dev.backing.deltaDiskFormat
 
         logging.info("Success to get %s disk "
                      "info: %s" % (vm.config.name, disk_info))
