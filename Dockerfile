@@ -10,7 +10,7 @@ WORKDIR /opt/prophet
 RUN mv /opt/prophet/etc/pip /root/.pip && \
     yum -y install epel-release && \
     yum clean all && yum makecache && \
-    yum -y install gcc python2-pip python-devel python-pbr && \
+    yum -y install gcc python2-pip python-devel python-pbr sshpass && \
     pip install pip==9.0.3 && \
     yum install -y nmap && \
     yum install -y /opt/prophet/tools/wmi-1.3.14-4.el7.art.x86_64.rpm && \
