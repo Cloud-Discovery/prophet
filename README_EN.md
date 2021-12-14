@@ -181,4 +181,8 @@ TODO: 该功能需要进行合并
 
 ### 如何修改代码
 
-## 维护人
+## 贡献者
+
+<a href = "https://github.com/Cloud-Discovery/prophet/graphs/contributors">
+  <img src = "https://contrib.rocks/image?repo = Cloud-Discovery/prophet"/>
+</a>

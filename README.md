@@ -1,7 +1,19 @@
+<p align="center"><a href="https://oneprocloud.com"><img src="https://oneprocloud.com/_nuxt/img/slider-tit.6a3d60f.png" alt="HyperBDR" width="300" /></a></p>
+<h3 align="center">云迁移/云灾备必备的调研工具</h3>
+
+<p align="center">
+  <a href="https://shields.io/github/downloads/Cloud-Discovery/prophet/total"><img src="https://shields.io/github/downloads/Cloud-Discovery/prophet/total" alt=" release"></a>
+  <a href="https://github.com/Cloud-Discovery/prophet"><img src="https://img.shields.io/github/stars/Cloud-Discovery/prophet?color=%231890FF&style=flat-square" alt="Stars"></a>
+</p>
+
+--------------------------
+
+- [ENGLISH](https://github.com/Cloud-Discovery/prophet/blob/master/README_EN.md)
+
 ## 目录
 
 - [项目说明](#项目说明)
-- [安装说明](#install)
+- [安装说明](#安装说明)
 - [开发说明](#开发说明)
 - [维护人](#维护人)
 - [协议说明](#协议说明)
@@ -181,4 +193,11 @@ TODO: 该功能需要进行合并
 
 ### 如何修改代码
 
-## 维护人
+## 贡献者
+
+感谢以下贡献者为本项目做出的贡献
+
+<a href="https://github.com/Cloud-Discovery/prophet/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Cloud-Discovery/prophet" />
+</a>
+
