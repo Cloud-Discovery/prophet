@@ -31,7 +31,7 @@ class GenerateMac(object):
 
     def save_to_yaml(self):
         logging.info("Saving file %s...", self.dirname + MAC_FILE_NAME)
-        os.path.walk(self.dirname, self._find_file, ())
+        os.walk(self.dirname, self._find_file, ())
         yamlfile = os.path.join(self.dirname, MAC_FILE_NAME)
         with open(yamlfile, "w") as yf:
             yaml.safe_dump(self.mac_info, yf, default_flow_style=False)

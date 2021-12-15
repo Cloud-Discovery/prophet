@@ -14,11 +14,7 @@ import csv
 import json
 import logging
 import os
-import sys
 import yaml
-
-reload(sys)
-sys.setdefaultencoding("utf-8")
 
 
 class ConfigFile(object):

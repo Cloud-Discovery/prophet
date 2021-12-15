@@ -7,3 +7,5 @@ python-nmap==0.6.1
 pyvmomi==6.7.1
 pyyaml==5.1.1
 requests==2.22.0
+humanfriendly==4.18
+openpyxl==2.6.4

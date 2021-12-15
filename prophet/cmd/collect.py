@@ -22,7 +22,7 @@ import time
 from prophet.controller.network import NetworkController
 from prophet.controller.batch_job import BatchJob
 
-VER = "1.1.0 Beta"
+VER = "v1.1.0"
 
 # Default log name
 LOG_FILE = "prophet.log"

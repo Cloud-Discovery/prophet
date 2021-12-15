@@ -14,8 +14,7 @@
 
 - [项目说明](#项目说明)
 - [安装说明](#安装说明)
-- [开发说明](#开发说明)
-- [维护人](#维护人)
+- [贡献者](#贡献者)
 - [协议说明](#协议说明)
 
 ## 项目说明
@@ -157,7 +156,7 @@ optional arguments:
 
 首先需要在生成的scan_csv.csv中更新要采集主机的鉴权信息。
 
-![](docs/images/scan_csv_sample.png)
+![](docs/images/scan_csv_modified_sample.png)
 
 ```
 prophet-collect collect --host-file /tmp/scan_hosts.csv --output-path /tmp -f
@@ -181,17 +180,29 @@ host_collection_info
 
 ### (稳定)功能三: 分析并输出报告
 
-TODO: 该功能需要进行合并
+#### 功能说明
 
-## 开发说明
+将采集后的结果进行分析，并输出最终的可迁移性报告，该部分可以根据需求扩展。
 
-### 项目架构
+```
+usage: prophet-analysis report [-h] --package-file PACKAGE_FILE --output-path
+                               OUTPUT_PATH [--clean]
 
-### 代码结构
+optional arguments:
+  -h, --help            show this help message and exit
+  --package-file PACKAGE_FILE
+                        Investigate package file which is genreated by
+                        prophet-collect
+  --output-path OUTPUT_PATH
+                        Generate report path
+  --clean               Generate report path
+```
 
-### 如何构建开发环境
+#### 示例：分析并输出报告
 
-### 如何修改代码
+```
+prophet-analysis -d -v report --package-file /tmp/host_collection_info_20211215202459.zip --output-path /tmp
+```
 
 ## 贡献者
 
