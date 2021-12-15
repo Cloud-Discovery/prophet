@@ -16,8 +16,17 @@ jobs:
     - name: Run docker build
       run: docker build . --file Dockerfile --tag oneprocloud/cloud-discovery-prophet:latest
       
+    - name: Tag Aliyun
+      run: docker tag oneprocloud/cloud-discovery-prophet:latest registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
+      
     - name: Login dockerhub
       run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
       
     - name: Push to dockerhub
       run: docker push oneprocloud/cloud-discovery-prophet:latest
+      
+    - name: Login Aliyun dockerhub
+      run: docker login -u ${{ secrets.ALIYUN_DOCKERHUB_USERNAME }} -p ${{ secrets.ALIYUN_DOCKERHUB_PASSWORD }} registry.cn-beijing.aliyuncs.com
+      
+    - name: Push to aliyun dockerhub
+      run: docker push registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
