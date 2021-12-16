@@ -10,6 +10,7 @@
 
 """Common method module"""
 
+import logging
 import calendar
 import errno
 import functools
@@ -23,6 +24,12 @@ import signal
 import subprocess
 import time
 from datetime import datetime
+
+# Default path for logs
+DEFAULT_PATH = "logs"
+
+# Default log format
+LOG_FORMAT = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
 
 
 class ProcessExecutionError(Exception):
@@ -364,39 +371,38 @@ def mkdir_p(path):
             raise
 
 
-def setup_logging(log_path=None, log_name=None,
-                  debug=False, verbose=False):
-    """Set up global logs
+def init_logging(debug=False, verbose=True,
+                 log_file=None, log_path=None):
+    """Initilize logging for common usage
 
-    By default, script will create a log directory in the same path
-    with the script. Or you can specify the directory yourself.
-
-    To use logging in this code in anywhere, just import logging.
-
+    By default, log will save at logs dir under current running path.
     """
 
-    if log_path is None:
-        log_path = os.path.join(current_dir(), "log")
+    logger = logging.getLogger()
+    log_level = logging.DEBUG if debug else logging.INFO
+    logger.setLevel(log_level)
 
-    if not os.path.exists(log_path):
-        mkdir_p(log_path)
-
-    # Default log settings
-    log_format = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
-    log_level = logging.INFO
-
-    if debug:
-        log_level = logging.DEBUG
-        log_file = os.path.join(log_path, "%s.debug.log" % log_name)
-    else:
-        log_file = os.path.join(log_path, "%s.log" % log_name)
-
+    # Set console handler
     if verbose:
-        logging.basicConfig(
-            format=log_format,
-            level=log_level)
+        console = logging.StreamHandler()
+        console.setLevel(log_level)
+        console.setFormatter(logging.Formatter(fmt=LOG_FORMAT))
+        logger.addHandler(console)
     else:
-        logging.basicConfig(
-            format=log_format,
-            level=log_level,
-            filename=log_file)
+        # NOTE(Ray): if verbose not given disable console output, this
+        # is a tricky way to implement
+        logger.handlers = []
+
+    if log_file:
+        if not log_path:
+            log_path = DEFAULT_PATH
+
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+
+        log_path = os.path.join(log_path, log_file)
+
+        fileout = logging.FileHandler(log_path, "a")
+        fileout.setLevel(log_level)
+        fileout.setFormatter(logging.Formatter(fmt=LOG_FORMAT))
+        logger.addHandler(fileout)

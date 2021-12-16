@@ -15,26 +15,9 @@ import logging
 import sys
 
 from prophet.controller.analysis.report_job import ReportJob
+from prophet.utils import init_logging
 
 VER = "v1.0.0"
-
-
-def log_init(debug=False, verbose=False):
-    """Set up global logs"""
-    log_format = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
-    log_level = logging.INFO
-
-    if debug:
-        log_level = logging.DEBUG
-
-    if verbose:
-        logging.basicConfig(
-                format=log_format,
-                level=log_level)
-    else:
-        logging.basicConfig(
-                format=log_format,
-                level=log_level)
 
 
 def analysis_report(args):
@@ -70,12 +53,16 @@ def parse_sys_args(argv):
 
     parser_report.set_defaults(func=analysis_report)
 
-    return parser.parse_args(argv[1:])
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    else:
+        return parser.parse_args(argv[1:])
 
 
 def main():
     args = parse_sys_args(sys.argv)
-    log_init(args.debug, args.verbose)
+    init_logging(args.debug, args.verbose)
     args.func(args)
 
 

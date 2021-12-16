@@ -14,34 +14,17 @@
 import argparse
 import logging
 import os
-import pandas as pd
-import shutil
 import sys
-import time
 
 from prophet.controller.network import NetworkController
 from prophet.controller.batch_job import BatchJob
+from prophet.utils import init_logging
 
 VER = "v1.1.0"
 
 # Default log name
 LOG_FILE = "prophet.log"
 
-def log_init(debug=False, verbose=False, log_path=None):
-    """Set up global logs"""
-    log_format = "%(asctime)s %(process)s %(levelname)s [-] %(message)s"
-    log_level = logging.DEBUG if debug else logging.INFO
-
-    # Always write log file
-    log_file = os.path.join(log_path, LOG_FILE)
-
-    logging.basicConfig(
-        format=log_format,
-        level=log_level,
-        filename=log_file)
- 
-    if verbose:
-        logging.getLogger().addHandler(logging.StreamHandler())
 
 def scan_network(args):
     host = args.host
@@ -101,11 +84,15 @@ def parse_sys_args(argv):
                                 help="Force check all hosts")
     parser_collect.set_defaults(func=batch_collection)
 
-    return parser.parse_args(argv[1:])
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    else:
+        return parser.parse_args(argv[1:])
  
 def main():
     args = parse_sys_args(sys.argv)
-    log_init(args.debug, args.verbose, args.output_path)
+    init_logging(args.debug, args.verbose, LOG_FILE, args.output_path)
     args.func(args)
  
 if __name__ == "__main__":
