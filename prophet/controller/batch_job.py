@@ -105,6 +105,7 @@ class BatchJob(object):
                      "in %s..." % (self.host_file, self.report_filename))
         hosts = self._parse_host_file()
 
+        total_check_hosts = []
         success_hosts = []
         failed_hosts = []
         logging.info("Trying to collect %s host(s)..." % len(hosts))
@@ -143,6 +144,10 @@ class BatchJob(object):
                              "information..." % host_ip)
 
                 collect_os_type = os_type.upper()
+
+                total_check_hosts.append("[%s]%s" % (
+                        collect_os_type, host_ip))
+
                 try:
                     if collect_os_type == LINUX:
                         host_info = LinuxHostController(
@@ -181,6 +186,10 @@ class BatchJob(object):
                 hosts.to_csv(self.host_file, index=False)
                 logging.info("Sucessfully collect %s "
                              "information." % host_ip)
+
+                if collect_os_type == VMWARE:
+                    host_info.show_collection_report()
+
             except Exception as e:
                 logging.exception(e)
                 logging.error("Check %s failed, please check it host info."
@@ -198,10 +207,12 @@ class BatchJob(object):
         logging.info("===========Summary==========")
 
         logging.info(
-                "Totally got %s host(s), "
+                "Total %s host(s) in list, "
+                "Need to check %s host(s), "
                 "success %s hosts, "
                 "failed %s hosts." % (
                     len(hosts),
+                    len(total_check_hosts),
                     len(success_hosts),
                     len(failed_hosts)))
 
@@ -210,9 +221,6 @@ class BatchJob(object):
 
         if failed_hosts:
             logging.info("Failed hosts: %s" % failed_hosts)
-
-        if collect_os_type == VMWARE:
-            host_info.show_collection_report()
 
         logging.info("============================")
 
@@ -249,6 +257,15 @@ class BatchJob(object):
         logging.info("Save insensitive scan report done.")
 
     def _prepare(self):
+        # Clean host collection base path if force check
+        if os.path.exists(self.coll_path) and self.force_check:
+            logging.info("Deleting existing host "
+                    "collection path %s..." % self.coll_path)
+            shutil.rmtree(self.coll_path)
+            logging.info("Delete existing host "
+                    "collection path %s Succesfully" % self.coll_path)
+
+        # Prepare to create report directories
         for report_path in [self.linux_report_path,
                             self.windows_report_path,
                             self.vmware_report_path]:
