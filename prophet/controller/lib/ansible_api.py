@@ -145,18 +145,16 @@ class AnsibleApi(object):
             tqm.cleanup()
         shutil.rmtree(constants.DEFAULT_LOCAL_TMP, True)
 
-        results_raw = {
+        results = {
             "success": {},
             "failed": {},
             "unreachable": {}
         }
         for host, result in results_callback.host_ok.items():
-            results_raw["success"][host] = result._result
+            results["success"][host] = result._result
         for host, result in results_callback.host_failed.items():
-            results_raw["failed"][host] = result._result
+            results["failed"][host] = result._result
         for host, result in results_callback.host_unreachable.items():
-            results_raw["unreachable"][host] = result._result
-        return yaml.safe_dump(
-            json.loads(json.dumps(results_raw, indent=4)),
-            default_flow_style=False
-        )
+            results["unreachable"][host] = result._result
+
+        return results

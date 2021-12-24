@@ -377,7 +377,6 @@ def init_logging(debug=False, verbose=True,
 
     By default, log will save at logs dir under current running path.
     """
-
     logger = logging.getLogger()
     log_level = logging.DEBUG if debug else logging.INFO
     logger.setLevel(log_level)

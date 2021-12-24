@@ -120,8 +120,12 @@ class ReportJob(object):
 
         mac_file = os.path.join(self.tmp_dir, MAC_INFO_FILENAME)
         basic_csv_file = os.path.join(self.output_path, "basic_info.csv")
+
+        logging.info("Open mac file %s for analysis..." % mac_file)
         with open(mac_file, "r") as yf:
             data = yaml.safe_load(yf.read())
+            logging.debug("Get data %s" % data)
+
         for _, i in data.items():
             yamls = i['yamls']
             for y in yamls:

@@ -1,13 +1,15 @@
-#!/usr/bin/env python
-# -*- coding=utf8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# Copyright (c) 2021 OnePro Cloud Ltd.
 #
-# Copyright 2019 Prophet Tech (Shanghai) Ltd.
+#   prophet is licensed under Mulan PubL v2.
+#   You can use this software according to the terms and conditions of the Mulan PubL v2.
+#   You may obtain a copy of Mulan PubL v2 at:
 #
-# Authors: Ray <sunqi@prophetech.cn>
+#            http://license.coscl.org.cn/MulanPubL-2.0
 #
-# Copyright (c) 2019 This file is confidential and proprietary.
-# All Rights Resrved, Prophet Tech (Shanghai) Ltd (http://www.prophetech.cn).
+#   THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+#   EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+#   MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+#   See the Mulan PubL v2 for more details.
 
 import setuptools
 

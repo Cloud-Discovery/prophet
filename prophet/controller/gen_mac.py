@@ -10,10 +10,11 @@
 
 """Generate index file index by host MAC"""
 
-import os
-import yaml
+import glob
 import logging
+import os
 import pandas as pd
+import yaml
 
 LINUX_YAML_FORMAT = 'linux'
 WIN_YAML_FORMAT = 'windows'
@@ -29,13 +30,20 @@ class GenerateMac(object):
         self.dirname = search_dir
         self._tcp_ports = {}
 
+    @property
+    def mac_info_file(self):
+        return os.path.join(self.dirname, MAC_FILE_NAME)
+
     def save_to_yaml(self):
-        logging.info("Saving file %s...", self.dirname + MAC_FILE_NAME)
+        logging.info("Saving mac index "
+                "file %s..." % self.mac_info_file)
+
         os.walk(self.dirname, self._find_file, ())
-        yamlfile = os.path.join(self.dirname, MAC_FILE_NAME)
-        with open(yamlfile, "w") as yf:
+
+        with open(self.mac_info_file, "w") as yf:
             yaml.safe_dump(self.mac_info, yf, default_flow_style=False)
-        logging.info('Sucessfully save file %s.', self.dirname + MAC_FILE_NAME)
+
+        logging.info('Sucessfully save mac index file %s.' % self.mac_info_file)
 
     @property
     def tcp_ports(self):
@@ -54,7 +62,10 @@ class GenerateMac(object):
         return self._tcp_ports
 
     def _find_file(self, arg, dirname, files):
-        for file in files:
+        logging.info("Finding files in %s..." % dirname)
+        yaml_files = glob.glob(dirname, "*.yaml")
+
+        for file in yaml_files:
             file_path = os.path.join(dirname, file)
             if not file_path.endswith('.yaml'):
                 continue
@@ -106,6 +117,7 @@ class GenerateMac(object):
         if data_type == LINUX_YAML_FORMAT:
             # Fetch mac from ansible result
             data = data.get('success')
+            logging.debug("get LINUX DATA: %s" % data)
             for _, v in data.iteritems():
                 networks = v['ansible_facts']['ansible_default_ipv4']
                 if isinstance(networks, list):

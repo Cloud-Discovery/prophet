@@ -14,6 +14,8 @@ import logging
 import nmap
 import os
 
+import pandas as pd
+
 DEFAULT_ARGS = "-sS -O"
 DEFAULT_FILE_NAME = "scan_hosts.csv"
 DEFAULT_HEADERS = ["hostname", "ip", "username", "password", "ssh_port",
@@ -51,44 +53,47 @@ class NetworkController(object):
             os.path.join(self.report_storage_path,
                          DEFAULT_FILE_NAME)
         )
-        with open(report_path, "w") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=DEFAULT_HEADERS)
-            writer.writeheader()
-            hosts = self._scan()
-            for host in hosts:
-                try:
-                    logging.info("Analysis %s..." % host)
-                    host_info = self.nm[host]
-                    logging.debug("Host info %s" % host_info)
-                    hostname = host_info.hostname()
-                    mac = self._get_mac(host_info.get("addresses"))
-                    osfamily, version = self._get_os(host_info.get("osmatch"))
-                    vendor = self._get_vendor(host_info.get("vendor"), mac)
-                    ssh_port = self._get_ssh_port(osfamily)
-                    all_tcp = ",".join(
-                        [str(x) for x in self.nm[host].all_tcp()])
-                    username = self._get_username(osfamily)
-                    check = self._get_check_status(vendor, osfamily)
-                    row_data = {
-                        "hostname": hostname,
-                        "ip": host,
-                        "username": username,
-                        "password": DEFAULT_PASSWORD,
-                        "ssh_port": ssh_port,
-                        "key_path": DEFAULT_KEY_PATH,
-                        "mac": mac,
-                        "vendor": vendor,
-                        "check_status": check,
-                        "os": osfamily,
-                        "version": version,
-                        "tcp_ports": all_tcp,
-                        "do_status": DEFAULT_DO_STATUS
-                    }
-                    logging.debug("Writing row %s" % row_data)
-                    writer.writerow(row_data)
-                except Exception as e:
-                    logging.exception(e)
-                    logging.warn("Analysis host %s failed." % host)
+        #writer = csv.DictWriter(csvfile, fieldnames=DEFAULT_HEADERS)
+        #writer.writeheader()
+        hosts = self._scan()
+        data = []
+        for host in hosts:
+            try:
+                logging.info("Analysis %s..." % host)
+                host_info = self.nm[host]
+                logging.debug("Host info %s" % host_info)
+                hostname = host_info.hostname()
+                mac = self._get_mac(host_info.get("addresses"))
+                osfamily, version = self._get_os(host_info.get("osmatch"))
+                vendor = self._get_vendor(host_info.get("vendor"), mac)
+                ssh_port = self._get_ssh_port(osfamily)
+                all_tcp = ",".join(
+                    [str(x) for x in self.nm[host].all_tcp()])
+                username = self._get_username(osfamily)
+                check = self._get_check_status(vendor, osfamily)
+                row_data = {
+                    "hostname": hostname,
+                    "ip": host,
+                    "username": username,
+                    "password": DEFAULT_PASSWORD,
+                    "ssh_port": ssh_port,
+                    "key_path": DEFAULT_KEY_PATH,
+                    "mac": mac,
+                    "vendor": vendor,
+                    "check_status": check,
+                    "os": osfamily,
+                    "version": version,
+                    "tcp_ports": all_tcp,
+                    "do_status": DEFAULT_DO_STATUS
+                }
+                logging.debug("Writing row %s" % row_data)
+                #writer.writerow(row_data)
+                data.append(row_data)
+            except Exception as e:
+                logging.exception(e)
+                logging.warn("Analysis host %s failed." % host)
+        hosts_pd = pd.DataFrame(data, columns=DEFAULT_HEADERS)
+        hosts_pd.to_csv(report_path)
 
     def _scan(self):
         logging.info("Begin scaning %s..." % self.host)

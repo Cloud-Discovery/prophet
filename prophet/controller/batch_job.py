@@ -16,6 +16,8 @@ import os
 import shutil
 import time
 
+from stevedore import driver
+
 import pandas as pd
 
 from prophet.controller.linux_host import LinuxHostController
@@ -94,6 +96,14 @@ class BatchJob(object):
     def coll_path(self):
         return os.path.join(self.output_path, REPORT_PATH_NAME)
 
+    @property
+    def collection_path(self):
+        return os.path.join(self.output_path, REPORT_PATH_NAME)
+
+    def _get_host_collection_path(self, os_type):
+        host_path = "%s_hosts" % os_type
+        return os.path.join(self.collection_path, host_path)
+
     def collect(self):
         """Collect host information
 
@@ -105,9 +115,11 @@ class BatchJob(object):
                      "in %s..." % (self.host_file, self.report_filename))
         hosts = self._parse_host_file()
 
+        # For summary display
         total_check_hosts = []
         success_hosts = []
         failed_hosts = []
+
         logging.info("Trying to collect %s host(s)..." % len(hosts))
 
         for index, row in hosts.iterrows():
@@ -140,7 +152,7 @@ class BatchJob(object):
                         host_ip, username, password, key_path):
                     continue
 
-                logging.info("Beginning to collect %s "
+                logging.info("Beginning to collect host %s "
                              "information..." % host_ip)
 
                 collect_os_type = os_type.upper()
@@ -149,28 +161,46 @@ class BatchJob(object):
                         collect_os_type, host_ip))
 
                 try:
-                    if collect_os_type == LINUX:
-                        host_info = LinuxHostController(
-                            host_ip, ssh_port, username,
-                            password, key_path,
-                            self.linux_report_path)
-                        host_info.get_linux_host_info()
-                    elif collect_os_type == WINDOWS:
-                        host_info = WindowsHostCollector(
-                            host_ip, username, password,
-                            self.windows_report_path)
-                        host_info.get_windows_host_info()
-                    elif collect_os_type == VMWARE:
-                        if not ssh_port:
-                            ssh_port = 443
-                        host_info = VMwareHostController(
-                            host_ip, ssh_port, username, password,
-                            self.vmware_report_path)
-                        host_info.get_all_info()
-                    else:
-                        raise OSError("Unsupport os type %s "
-                                      "if host %s" % (
-                                          collect_os_type, host_ip))
+                    # FIXME(Ray): need to lower collect_os_type
+                    os_type = collect_os_type.lower()
+                    output_path = self._get_host_collection_path(
+                            os_type)
+                    driver_manager = driver.DriverManager(
+                            namespace="host_collector",
+                            name=os_type,
+                            invoke_on_load=False)
+                    c = driver_manager.driver(
+                            ip=host_ip,
+                            username=username,
+                            password=password,
+                            ssh_port=ssh_port,
+                            key_path=key_path,
+                            os_type=os_type,
+                            output_path=output_path)
+                    c.collect()
+
+                    #if collect_os_type == LINUX:
+                    #    host_info = LinuxHostController(
+                    #        host_ip, ssh_port, username,
+                    #        password, key_path,
+                    #        self.linux_report_path)
+                    #    host_info.get_linux_host_info()
+                    #elif collect_os_type == WINDOWS:
+                    #    host_info = WindowsHostCollector(
+                    #        host_ip, username, password,
+                    #        self.windows_report_path)
+                    #    host_info.get_windows_host_info()
+                    #elif collect_os_type == VMWARE:
+                    #    if not ssh_port:
+                    #        ssh_port = 443
+                    #    host_info = VMwareHostController(
+                    #        host_ip, ssh_port, username, password,
+                    #        self.vmware_report_path)
+                    #    host_info.get_all_info()
+                    #else:
+                    #    raise OSError("Unsupport os type %s "
+                    #                  "if host %s" % (
+                    #                      collect_os_type, host_ip))
 
                     success_hosts.append("[%s]%s" % (
                         collect_os_type, host_ip))
