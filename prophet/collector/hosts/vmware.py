@@ -1,25 +1,28 @@
-#!/usr/bin/env python
-# -*- coding=utf8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# Copyright (c) 2021 OnePro Cloud Ltd.
 #
-# Copyright 2019 Prophet Tech (Shanghai) Ltd.
+#   prophet is licensed under Mulan PubL v2.
+#   You can use this software according to the terms and conditions of the Mulan PubL v2.
+#   You may obtain a copy of Mulan PubL v2 at:
 #
-# Authors: Ray <sunqi@prophetech.cn>
-# Authors: Xu XingZhuang <xuxingzhuang@prophetech.cn>
+#            http://license.coscl.org.cn/MulanPubL-2.0
 #
-# Copyright (c) 2019 This file is confidential and proprietary.
-# All Rights Resrved, Prophet Tech (Shanghai) Ltd (http://www.prophetech.cn).
-#
-# Collection VMware host info
-#
-# Steps:
-#
-#     1. Test VMwarer connections.
-#     2. Get VCenter manager host info.
-#     3. Get all esxi host info.
-#     4. Get all vms info for esxi.
-#     5. Store information to config file for each virtual machine.
-#
+#   THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+#   EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+#   MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+#   See the Mulan PubL v2 for more details.
+
+"""Collect VMware ESXi and VMs information using VMware lib
+
+ Steps:
+
+     1. Test VMwarer connections.
+     2. Get VCenter manager host info.
+     3. Get all esxi host info.
+     4. Get all vms info for esxi.
+     5. Store information to config file for each virtual machine.
+
+"""
+
 
 import atexit
 import logging
@@ -33,42 +36,32 @@ from pyVim import connect
 from pyVmomi import vmodl
 from pyVmomi import vim
 
-from prophet.controller.config_file import ConfigFile, CsvDataFile
+#from prophet.controller.config_file import ConfigFile, CsvDataFile
+from prophet.collector.base import BaseHostCollector
+
+# default port for vmware connection
+DEFAULT_PORT = 443
 
 
-class VMwareHostController(object):
-    """ VMware host api """
+class VMwareCollector(BaseHostCollector):
 
-    def __init__(self,
-                 host,
-                 port,
-                 username,
-                 password,
-                 output_path,
-                 disable_ssl_verification=True):
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        self.output_path = output_path
-        self.disable_ssl_verification = disable_ssl_verification
+    def __init__(self, ip, username, password, ssh_port, key_path,
+                 output_path, os_type, **kwargs):
+
+        super(VMwareCollector, self).__init__(
+                ip, username, password, ssh_port, key_path,
+                output_path, os_type, disable_ssl_verification=True,
+                **kwargs)
+
+        if not self.ssh_port:
+            self.ssh_port = DEFAULT_PORT
 
         self._content = None
-        self._check_connect()
-        self.connect()
 
+        # Dict to save different resources
         self._esxis_info = {}
         self._vms_info = {}
         self._vc_info = {}
-
-        self._connect_info = {
-            "VMware_" + self.host: {
-                "ipaddr": self.host,
-                "port": self.port,
-                "username": self.username,
-                "password": self.password
-            }
-        }
 
         # Generate report for vCenter collection
         self.success_vcs = []
@@ -82,39 +75,87 @@ class VMwareHostController(object):
         self.success_vms = []
         self.failed_vms = []
 
+        # Report summary
+        self._summary = {
+            "info": [],
+            "debug": []
+        }
+
+    def collect(self):
+        """Get all VMware related information
+
+        If the specify ip is vCenter, first get vCenter information,
+        then get exsi later. If it's only esxi, then just save the
+        esxi information.
+
+        After that get all VMs and save to files.
+        """
+
+        # Try to connect to server first
+        self.connect()
+
+        vmware_info = {}
+        server_type = "exsi"
+
+        # Get ESXi information
+        self._get_esxi_info()
+
+        # If the given address is vCenter, also get vCenter infromation
+        if self._content.about.name == "VMware vCenter Server":
+            server_type = "vcenter"
+            self._get_vcenter_info()
+            self._vc_info[self.ip]["esxi"] = self._esxis_info
+            vmware_info = self._vc_info
+        else:
+            vmware_info = self._esxis_info
+
+        filename = "%s_%s.yaml" % (self.ip, server_type)
+        yamlfile = os.path.join(self.base_path, filename)
+        self.save_to_yaml(yamlfile, vmware_info)
+
+        # Begin to collect all VMs
+        self._get_vms_info()
+
+    def connect(self):
+        """Connect to vCenter or ESXi"""
+
+        # Check connect first
+        self._check_connect()
+
+        logging.debug("Start connect [%s] vmware host with port [%s],"
+                      "username [%s], password [%s]..."
+                      % (self.ip, self.ssh_port,
+                         self.username, self.password))
+        logging.info("Start connect %s vmware host..." % self.ip)
+        if self.disable_ssl_verification:
+            service_instance = connect.SmartConnectNoSSL(
+                host=self.ip,
+                user=self.username,
+                pwd=self.password,
+                port=int(self.ssh_port))
+        else:
+            service_instance = connect.SmartConnect(
+                host=self.ip,
+                user=self.username,
+                pwd=self.password,
+                port=int(self.ssh_port))
+        atexit.register(connect.Disconnect, service_instance)
+        logging.info("Connect %s vmware host sucessful." % self.ip)
+        self._content = service_instance.RetrieveContent()
+
     def _check_connect(self):
         try:
             logging.info("Check %s:%s host network..."
-                         % (self.host, self.port))
-            telnetlib.Telnet(self.host, port=self.port, timeout=5)
+                         % (self.ip, self.ssh_port))
+            telnetlib.Telnet(self.ip, port=self.ssh_port, timeout=5)
         except Exception as error:
             logging.error("Check %s:%s failed, due to %s"
-                          % (self.host, self.port, error))
+                          % (self.ip, self.ssh_port, error))
             sys.exit()
         else:
             logging.info("Host %s:%s check successful."
-                         % (self.host, self.port))
+                         % (self.ip, self.ssh_port))
 
-    def connect(self):
-        logging.debug("Start connect [%s] vmware host with port [%s],"
-                      "username [%s], password [%s]..."
-                      % (self.host, self.port, self.username, self.password))
-        logging.info("Start connect %s vmware host..." % self.host)
-        if self.disable_ssl_verification:
-            service_instance = connect.SmartConnectNoSSL(
-                host=self.host,
-                user=self.username,
-                pwd=self.password,
-                port=int(self.port))
-        else:
-            service_instance = connect.SmartConnect(
-                host=self.host,
-                user=self.username,
-                pwd=self.password,
-                port=int(self.port))
-        atexit.register(connect.Disconnect, service_instance)
-        logging.info("Connect %s vmware host sucessful." % self.host)
-        self._content = service_instance.RetrieveContent()
 
     def _get_content_obj(self, content, viewtype, name=None):
         recursive = True
@@ -125,9 +166,9 @@ class VMwareHostController(object):
     def _get_vcenter_info(self):
         logging.info(
                 "Trying to get "
-                "VMware vCenter %s info..." % self.host)
+                "VMware vCenter %s info..." % self.ip)
         try:
-            self._vc_info[self.host] = {
+            self._vc_info[self.ip] = {
                 "name": getattr(self._content, "about.name", ""),
                 "fullName": getattr(self._content, "about.fullName", ""),
                 "vendor": getattr(self._content, "about.vendor", ""),
@@ -150,80 +191,47 @@ class VMwareHostController(object):
                 "licenseProductVersion": getattr(
                     self._content, "about.licenseProductVersion", "")
             }
-            self.success_vcs.append(self.host)
+            self.success_vcs.append(self.ip)
         except Exception as e:
             logging.error(
                     "Failed to get vCenter %s "
-                    "information, due to:" % self.host)
+                    "information, due to:" % self.ip)
             logging.exception(e)
-            self.failed_vcs.append(self.host)
+            self.failed_vcs.append(self.ip)
             return
 
         logging.info(
                 "Success to get VMWare vCenter "
                 "%s info succesfully: %s" % (
-                    self.host, self._vc_info))
+                    self.ip, self._vc_info))
 
-    def get_all_info(self):
-        """Get all VMware related information
-
-        If the specify ip is vCenter, first get vCenter information,
-        then get exsi later. If it's only esxi, then just save the
-        esxi information.
-
-        After that get all VMs and save to files.
-        """
-
-        vmware_info = {}
-        server_type = "_exsi"
-
-        # Get ESXi information
-        self._get_esxi_info()
-
-        # If the given address is vCenter, also get vCenter infromation
-        if self._content.about.name == "VMware vCenter Server":
-            server_type = "_vcenter"
-            self._get_vcenter_info()
-            self._vc_info[self.host]["esxi"] = self._esxis_info
-            vmware_info = self._vc_info
-        else:
-            vmware_info = self._esxis_info
-
-        # Write connection information to host_<type>.cfg
-        self._write_file_yaml(
-            self.output_path, "host",
-            self._connect_info,
-            suffix=server_type,
-            filetype="cfg")
-
-        # Save vCenter and ESxi into yaml file
-        self._write_file_yaml(
-            self.output_path, self.host,
-            vmware_info, suffix=server_type)
-
-        # Begin to collect all VMs
-        self._get_vms_info()
-
-    def show_collection_report(self):
-        logging.info("----------VMware Summary----------")
-        self._generate_report(
+    def get_summary(self):
+        logging.info("Get summary detailed for collection")
+        self._generate_summary(
                 "vCenter", self.success_vcs, self.failed_vcs)
-        self._generate_report(
+        self._generate_summary(
                 "ESXi", self.success_esxis, self.failed_esxis)
-        self._generate_report(
+        self._generate_summary(
                 "VM", self.success_vms, self.failed_vms)
 
-    def _generate_report(self, item_name, success_items, failed_items):
+        return self._summary
+
+    def _generate_summary(self, item_name, success_items, failed_items):
+        logging.debug("Generate summary for %s" % item_name)
         if success_items or failed_items:
-            logging.info(
-                    "%s Collection Result: "
-                    "Success %s, Failed %s" % (
-                        item_name,
-                        len(success_items),
-                        len(failed_items)))
-            logging.debug("Success Detailed: %s" % success_items)
-            logging.info("Failed Detailed: %s" % failed_items)
-            logging.info("----------------------------------")
+            result = "%s Collection Result: Success %s, Failed %s." % (
+                    item_name, len(success_items), len(failed_items))
+            self._summary["info"].append(result)
+
+            if len(failed_items) > 0:
+                failed_result = "Failed %s: %s" % (
+                        item_name, ",".join(failed_items))
+                self._summary["info"].append(failed_result)
+
+            if len(success_items) > 0:
+                success_result = "Success %s: %s" % (
+                        item_name, ",".join(success_items))
+                self._summary["debug"].append(success_result)
 
     def _get_vm_datastore_info(self, vm):
         datastore_info = {}
@@ -392,8 +400,10 @@ class VMwareHostController(object):
 
                 logging.info(
                         "Success to get VM %s info" % vm_name)
-                self._write_file_yaml(
-                    self.output_path, vm.config.name, vms_info)
+
+                filename = "%s_%s.yaml" % (vm.config.name, "vmware")
+                yamlfile = os.path.join(self.base_path, filename)
+                self.save_to_yaml(yamlfile, vms_info)
 
                 self.success_vms.append(vm_name)
             except Exception as e:
@@ -465,19 +475,6 @@ class VMwareHostController(object):
         logging.info("HA enable is %s, DRS enable is %s" % (ha, drs))
         return ha, drs
 
-    def _write_file_yaml(self, output_path, filename, values,
-                         suffix="_vmware", filetype="yaml"):
-        yamlfile = os.path.join(
-            output_path,
-            filename + suffix + "." + filetype
-        )
-        config = ConfigFile(yamlfile)
-        logging.info("Write %s info to %s yaml file..."
-                     % (filename, yamlfile))
-        config.convert_json_to_yaml(values)
-        logging.info("Write %s info to file successful."
-                     % (filename))
-
     def _get_esxi_info(self):
         """Get ESXi information"""
 
@@ -495,6 +492,7 @@ class VMwareHostController(object):
                     "datastore": self._get_esxi_datastore_info(esxi),
                     "network": self._get_esxi_network_info(esxi) 
                 }
+                self.success_esxis.append(esxi.name)
             except Exception as e:
                 logging.info("Failed to get ESXi %s" % esxi.name)
                 logging.exception(e)
@@ -590,137 +588,3 @@ class VMwareHostController(object):
 
         logging.info("Success to get ESXi %s datastore "
                      "info: %s" % (esxi.name, datastore_info))
-
-
-class VMwareHostReport(object):
-
-    def __init__(self, input_path, output_path, vmware_files):
-        self.input_path = input_path
-        self.output_path = output_path
-        self.vmware_files = vmware_files
-
-    def get_report(self):
-        for file in self.vmware_files:
-            data = list(self._get_data_info(file).values())[0]
-            hostname = self._get_hostname(data)
-            version = self._get_version(data)
-            cpu_num = self._get_cpu_num(data)
-            tol_mem = self._get_total_mem(data)
-            macaddr = self._get_macaddr(data)
-            volume_info = self._get_volume_info(data)
-            boot_type = self._get_boot_type(data)
-            migration_check = self._migration_check(data, boot_type)
-            self._yaml_to_csv(
-                file, hostname, version,
-                cpu_num, tol_mem, macaddr,
-                volume_info, boot_type, migration_check
-            )
-
-    def _get_data_info(self, file):
-        file_path = os.path.join(self.input_path, file)
-        with open(file_path) as host_info:
-            return yaml.load(host_info, Loader=yaml.FullLoader)
-
-    def _get_hostname(self, data):
-        return data["name"]
-
-    def _get_version(self, data):
-        return data["guestFullName"]
-
-    def _get_cpu_num(self, data):
-        return str(data["numCpu"])
-
-    def _get_total_mem(self, data):
-        return str(int(data["memoryMB"]) / 1024)
-
-    def _get_macaddr(self, data):
-        host_macaddr = []
-        for mac in data["network"].values():
-            host_macaddr.append(mac["macAddress"])
-        return host_macaddr
-
-    def _get_volume_info(self, data):
-        volume_info = {}
-        for disk_info in data["disks_info"].values():
-            disk_name = disk_info["fileName"]
-            disk_size = int(disk_info["capacityInKB"]) / 1024 / 1024
-            volume_info["disk_name:%s" % disk_name] = [
-                "disk_size:%s" % disk_size
-            ]
-        return volume_info
-
-    def _get_boot_type(self, data):
-        return data["firmware"]
-
-    def _migration_check(self, data, boot_type):
-        support_synchronization = "Yes"
-        support_increment = "Yes"
-        migration_proposal = ""
-        if "efi" in boot_type:
-            support_synchronization = "No"
-            support_increment = "No"
-            migration_proposal = ("Boot type:EFI, cloud not supported, "
-                                  "so migrate to the cloud start system "
-                                  "failed, need fix boot type is BIOS.")
-        for disk_info in data["disks_info"].values():
-            disk_mode = disk_info["diskMode"]
-            if "independent_persistent" == disk_mode:
-                support_synchronization = "No"
-                support_increment = "No"
-                migration_proposal = (migration_proposal +
-                                      "Disk is independent mode, cloud "
-                                      "not support migrate")
-        if int(data["version"].split('-')[1]) < 7:
-            support_increment = "No"
-            migration_proposal = (migration_proposal +
-                                  "VM version <7, not support CBT, "
-                                  "cannot support incremental backup.")
-        if not data["changeTrackingSupported"]:
-            support_increment = "No"
-            migration_proposal = (
-                migration_proposal + "VM not support CBT.")
-        if migration_proposal.strip() == "":
-            migration_proposal = "Check successful"
-        is_drs = 'Off'
-        is_ha = 'Off'
-        if data['drs']:
-            is_drs = 'On'
-        if data['ha']:
-            is_ha = 'On'
-
-        return (
-            support_synchronization,
-            support_increment,
-            is_drs,
-            is_ha,
-            migration_proposal
-        )
-
-    def _yaml_to_csv(self, file, hostname, version,
-                     cpu_num, tol_mem, macaddr,
-                     volume_info, boot_type, migration_check):
-        logging.info("hostname %s" % hostname)
-        host_data = [
-            {
-                "host_type": "VMware",
-                "hostname": hostname.decode('utf-8').encode('gbk'),
-                "address": "",
-                "version": version.decode('utf-8').encode('gbk'),
-                "cpu_num": cpu_num,
-                "tol_mem(G)": tol_mem,
-                "macaddr": macaddr,
-                "disk_info": volume_info,
-                "boot_type": boot_type,
-                "support_synchronization": migration_check[0],
-                "support_increment": migration_check[1],
-                "drs_on": migration_check[2],
-                "ha_on": migration_check[3],
-                "migration_proposal": migration_check[4]
-            }
-        ]
-        logging.info("Writing %s migration proposal..." % file)
-        file_name = 'analysis' + '.csv'
-        output_file = os.path.join(self.output_path, file_name)
-        csv_config = CsvDataFile(host_data, output_file)
-        csv_config.write_data_to_csv()
-        logging.info("Write to %s finish." % output_file)

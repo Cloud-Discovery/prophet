@@ -1,5 +1,5 @@
 <p align="center"><a href="https://oneprocloud.com"><img src="https://oneprocloud.com/_nuxt/img/slider-tit.6a3d60f.png" alt="HyperBDR" width="300" /></a></p>
-<h3 align="center">云迁移/云灾备必备的调研工具</h3>
+<h3 align="center">资源自动采集分析工具集，云迁移/云灾备必备的调研工具</h3>
 
 <p align="center">
   <a href="https://shields.io/github/downloads/Cloud-Discovery/prophet/total"><img src="https://shields.io/github/downloads/Cloud-Discovery/prophet/total" alt=" release"></a>
@@ -14,12 +14,14 @@
 
 - [项目说明](#项目说明)
 - [安装说明](#安装说明)
+- [使用说明](#使用说明)
+- [如何贡献](#如何贡献)
 - [贡献者](#贡献者)
 - [协议说明](#协议说明)
 
 ## 项目说明
 
-prophet是一个用于云迁移与云灾备前期技术调研使用的工具，目前主要对源端主机的基本情况进行采集，通过技术指标的比对，确保被调研的源端主机能够正确被工具正确迁移或灾备,同时根据数据量，预测数据传输时间。该项目目前已经在多个实际的云迁移和云灾备项目中得到验证，可以放心使用。
+prophet是一个自动化采集、分析的工具集，目前支持对物理机、VMware环境的采集和分析，未来将扩展至云平台资源、存储、网络等多种资源。目前主要应用与云迁移与云灾备前期技术调研，主要对源端主机的基本情况进行采集，通过技术指标的比对，确保被调研的源端主机能够正确被工具正确迁移或灾备,同时根据数据量，预测数据传输时间。该项目目前已经在多个实际的云迁移和云灾备项目中得到验证，可以放心使用。
 
 该项目未来发展的愿景是提供一站式调研平台，包括但不限于如下资源：各种云平台资源使用状况、文件存储、对象存储、容器平台、大数据平台、中间件、数据库等。同时也将提供蓝图画板，方便在项目前期进行方案编写使用，降低云迁移与云灾备过于冗长的前期调研周期。
 
@@ -27,14 +29,14 @@ prophet是一个用于云迁移与云灾备前期技术调研使用的工具，�
 
 * 通过nmap指令扫描全网存活的主机，并尽量通过包信息分析主机的基本情况
 * (稳定)通过VMWare API接口采集主机的详细信息，包含计算、存储和网络等与主机迁移
-* (测试)通过Ansible获取Linux主机的详细信息，包含计算、存储和网络等与主机相关信息
-* (测试)通过Windows WMI接口采集Windows主机的详细信息，包含计算、存储和网络等与主机相关信息
+* (稳定)通过Ansible获取Linux主机的详细信息，包含计算、存储和网络等与主机相关信息
+* (稳定)通过Windows WMI接口采集Windows主机的详细信息，包含计算、存储和网络等与主机相关信息
 * (稳定)将采集后的结果以yaml格式进行打包和压缩，并进行脱敏处理（移除用户相关信息）
-* (稳定)对采集后的结果进行分析，得出最终的技术调研结论
+* (重构中)对采集后的结果进行分析，得出最终的技术调研结论
 
 ## 安装说明
 
-### 代码安装
+### 源码安装
 
 ```
 git clone https://github.com/Cloud-Discovery/prophet
@@ -73,8 +75,8 @@ docker pull registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discov
 ***** 注意：为了防止对生产环境造成较大压力，扫描时采用单进程方式，所以扫描进度较慢，经过测算扫描一个子网掩码为24的子网所需要30分钟左右的时间。**
 
 ```
-usage: prophet-collect scan [-h] --host HOST [--arg ARG] --output-path
-                            OUTPUT_PATH
+usage: prophet-cli scan [-h] --host HOST [--arg ARG] --output-path OUTPUT_PATH
+                        [--report-name REPORT_NAME]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -83,6 +85,8 @@ optional arguments:
                         nmap document
   --output-path OUTPUT_PATH
                         Generate initial host report path
+  --report-name REPORT_NAME
+                        Scan report csv name
 ```
 
 #### 示例一: 获取子网主机
@@ -90,7 +94,7 @@ optional arguments:
 扫描192.168.10.0/24所有存活主机信息，并将csv文件生成在/tmp目录中。
 
 ```
-prophet-collect scan --host 192.168.10.0/24 --output-path /tmp/
+prophet-cli scan --host 192.168.10.0/24 --output-path /tmp/
 ```
 
 #### 示例二: 获取指定IP网段主机
@@ -98,7 +102,7 @@ prophet-collect scan --host 192.168.10.0/24 --output-path /tmp/
 扫描192.168.10.2-192.168.10.50所有存活主机信息，并将csv文件生成在/tmp目录中。
 
 ```
-prophet-collect scan --host 192.168.10.2-50 --output-path /tmp/
+prophet-cli scan --host 192.168.10.2-50 --output-path /tmp/
 ```
 
 #### csv结构说明
@@ -140,8 +144,8 @@ prophet-collect scan --host 192.168.10.2-50 --output-path /tmp/
 * (测试)目前Linux和Windows采集部分仍然是测试版本
 
 ```
-usage: prophet-collect collect [-h] --host-file HOST_FILE --output-path
-                               OUTPUT_PATH [-f]
+usage: prophet-cli collect [-h] --host-file HOST_FILE --output-path
+                           OUTPUT_PATH [-f] [--package-name PACKAGE_NAME]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -150,6 +154,8 @@ optional arguments:
   --output-path OUTPUT_PATH
                         Output path for batch collection
   -f, --force-check     Force check all hosts
+  --package-name PACKAGE_NAME
+                        Prefix name for host collection package
 ```
 
 #### 示例：执行采集
@@ -159,7 +165,7 @@ optional arguments:
 ![](docs/images/scan_csv_modified_sample.png)
 
 ```
-prophet-collect collect --host-file /tmp/scan_hosts.csv --output-path /tmp -f
+prophet-cli collect --host-file /tmp/scan_hosts.csv --output-path /tmp
 ```
 
 #### 采集结果说明
@@ -168,25 +174,24 @@ prophet-collect collect --host-file /tmp/scan_hosts.csv --output-path /tmp -f
 
 ```
 host_collection_info
-|-- linux_hosts -> Linux主机采集信息
-|-- vmware_hosts -> VMWare主机采集信息
-`-- windows_hosts -> Windows主机采集信息
-|-- mac_info.yaml -> 所有主机根据Mac地址进行索引，便于后续分析
+|-- LINUX -> Linux主机采集信息
+|-- VMWARE -> VMWare主机采集信息
+`-- WINDOWS -> Windows主机采集信息
 |-- prophet.log -> 采集过程中的日志，便于对于未知场景分析
 |-- scan_hosts.csv -> 采集的主机文件，含开放端口信息
 ```
 
 另外在输出目录中会生成host_collection_info_xxxxxxx.zip文件，该文件为最终用于分析的压缩文件。
 
-### (稳定)功能三: 分析并输出报告
+### (重构中)功能三: 分析并输出报告
 
 #### 功能说明
 
 将采集后的结果进行分析，并输出最终的可迁移性报告，该部分可以根据需求扩展。
 
 ```
-usage: prophet-analysis report [-h] --package-file PACKAGE_FILE --output-path
-                               OUTPUT_PATH [--clean]
+usage: prophet-cli report [-h] --package-file PACKAGE_FILE --output-path
+                          OUTPUT_PATH [--clean]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -201,8 +206,16 @@ optional arguments:
 #### 示例：分析并输出报告
 
 ```
-prophet-analysis -d -v report --package-file /tmp/host_collection_info_20211215202459.zip --output-path /tmp
+prophet-cli -d -v report --package-file /tmp/host_collection_info_20211215202459.zip --output-path /tmp
 ```
+
+## 如何贡献
+
+TODO: 开发者文档待完成
+
+## 协议说明
+
+本项目采用[木兰公共许可证，第2版](http://license.coscl.org.cn/MulanPubL-2.0)
 
 ## 贡献者
 
@@ -211,4 +224,3 @@ prophet-analysis -d -v report --package-file /tmp/host_collection_info_202112152
 <a href="https://github.com/Cloud-Discovery/prophet/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Cloud-Discovery/prophet" />
 </a>
-

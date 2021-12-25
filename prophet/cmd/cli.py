@@ -127,6 +127,10 @@ def parse_sys_args(argv):
         return parser.parse_args(argv[1:])
  
 def main():
+    # NOTE(Ray): If there are speicial chars in vars, like Chinese
+    # chars, something will be wrong if we don't set correct LANG,
+    # force set LANG to en_US.utf-8 by default
+    os.environ["LANG"] = "en_US.utf-8"
     args = parse_sys_args(sys.argv)
     init_logging(args.debug, args.verbose, LOG_FILE, args.output_path)
     args.func(args)

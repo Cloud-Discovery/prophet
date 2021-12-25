@@ -148,8 +148,10 @@ class HostCollector(object):
                         output_path=self.collection_path)
                 c.collect()
 
-                if c.summary():
-                    self.summeries.append(c.summary())
+                collect_summary = c.get_summary()
+
+                if collect_summary:
+                    self.summaries.append(collect_summary)
 
                 hosts.loc[index, "do_status"] = "success"
                 hosts.to_csv(self.host_file, index=False)
@@ -270,6 +272,13 @@ class HostCollector(object):
 
         # Show summary detailed message if have
         if self.summaries:
-            for s in summaries:
-                logging.info(s)
+            logging.info("===========Detailed==========")
+            for s in self.summaries:
+                if s["info"]:
+                    for info in s["info"]:
+                        logging.info(info)
+                logging.info("------------------------------")
+                if s["debug"]:
+                    for info in s["debug"]:
+                        logging.debug(info)
         logging.info("============================")

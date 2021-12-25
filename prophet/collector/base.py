@@ -70,10 +70,16 @@ class BaseHostCollector(object):
         """Implement in each sub class, main method to collect"""
         raise NotImplementedError
 
-    def summary(self):
+    def get_summary(self):
         """Summary for each collection if you want to display
 
-        If no summary returns, no need to inherit this method
+        If no summary returns, no need to inherit this method, summary
+        contains two parts of log, info and debug level
+
+            summary = {
+                "info": [lines],
+                "debug": [lines]
+            }
         """
         return
 
