@@ -8,7 +8,7 @@
 
 --------------------------
 
-- [ENGLISH](https://github.com/Cloud-Discovery/prophet/blob/master/README_EN.md)
+- [ENGLISH](https://github.com/Cloud-Discovery/prophet/blob/master/docs/README_EN.md)
 
 ## 目录
 
@@ -70,7 +70,7 @@ docker pull registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discov
 
 #### 功能说明
 
-通过网络扫描发现某一网段内存活的主机，并进行记录，可以作为后续更详细信息采集的输入。扫描完成后，将自动在指定路径下生成scan_hosts.csv文件，用于存储信息。
+通过网络扫描发现某一网段内存活的主机，并进行记录，可以作为后续更详细信息采集的输入。扫描完成后，将自动在指定路径下生成scan_results.csv文件，用于存储信息。
 
 ***** 注意：为了防止对生产环境造成较大压力，扫描时采用单进程方式，所以扫描进度较慢，经过测算扫描一个子网掩码为24的子网所需要30分钟左右的时间。**
 
@@ -123,10 +123,6 @@ prophet-cli scan --host 192.168.10.2-50 --output-path /tmp/
 | tcp_ports    | 对外开放的端口，可以为空                                                |
 | do_status    | 详细信息采集状态，表示是否完成采集或者失败，默认为空                                  |
 
-#### 参考样例
-
-![](docs/images/scan_csv_sample.png)
-
 ### (稳定)功能二：详细信息采集
 
 #### 功能说明
@@ -160,12 +156,18 @@ optional arguments:
 
 #### 示例：执行采集
 
-首先需要在生成的scan_csv.csv中更新要采集主机的鉴权信息。
+首先需要在生成的scan_results.csv中更新要采集主机的鉴权信息，在项目中的examples路径包含(scan_results.csv)[https://github.com/Cloud-Discovery/prophet/blob/master/examples/scan_results.csv]样例。
 
-![](docs/images/scan_csv_modified_sample.png)
+|hostname|ip            |username                   |password             |ssh_port|key_path|mac              |vendor|check_status|os     |version                                   |tcp_ports                                                                            |do_status|
+|--------|--------------|---------------------------|---------------------|--------|--------|-----------------|------|------------|-------|------------------------------------------|-------------------------------------------------------------------------------------|---------|
+|        |192.168.10.2  |administrator@vsphere.local|your_vcenter_password|        |        |00:50:56:9f:03:f0|      |check       |Windows|Microsoft Windows 7 or Windows Server 2012|80,88,135,139,389,443,445,514,636,2020,3389,8088,9009,9090                           |         |
+|        |192.168.10.6  |root                       |your_esxi_password   |443     |        |0c:c4:7a:e5:5d:20|      |check       |VMware |VMware ESXi Server 4.1                    |22,80,427,443,902,5988,5989,8000,8080,8100,8300                                      |         |
+|        |192.168.10.185|Administrator              |your_windows_password|        |        |00:50:56:9a:6d:2e|      |check       |Windows|Microsoft Windows Server 2003 SP1 or SP2  |135,139,445,1028,3389                                                                |         |
+|        |192.168.10.201|root                       |your_linux_password  |22      |        |ac:1f:6b:27:7f:e4|      |check       |Linux  |Linux 2.6.32 - 3.9                        |22,80,3306,4567,5000,5900,5901,5902,5903,5904,5906,5907,5910,5911,5915,8022,8080,9100|         |
+
 
 ```
-prophet-cli collect --host-file /tmp/scan_hosts.csv --output-path /tmp
+prophet-cli collect --host-file /tmp/scan_results.csv --output-path /tmp
 ```
 
 #### 采集结果说明
@@ -178,7 +180,7 @@ host_collection_info
 |-- VMWARE -> VMWare主机采集信息
 `-- WINDOWS -> Windows主机采集信息
 |-- prophet.log -> 采集过程中的日志，便于对于未知场景分析
-|-- scan_hosts.csv -> 采集的主机文件，含开放端口信息
+|-- scan_results.csv -> 采集的主机文件，含开放端口信息
 ```
 
 另外在输出目录中会生成host_collection_info_xxxxxxx.zip文件，该文件为最终用于分析的压缩文件。

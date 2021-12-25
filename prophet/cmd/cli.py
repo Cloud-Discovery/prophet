@@ -88,7 +88,8 @@ def parse_sys_args(argv):
             required=True, help="Generate initial host report path")
     parser_scan_network.add_argument("--report-name", dest="report_name",
             required=False, default=SCAN_REPORT_NAME,
-            help="Scan report csv name")
+            help="Scan report csv name, "
+                 "Default name is %s" % SCAN_REPORT_NAME)
     parser_scan_network.set_defaults(func=scan_network)
 
     # Collect Arguments
@@ -103,7 +104,8 @@ def parse_sys_args(argv):
             help="Force check all hosts")
     parser_collect.add_argument("--package-name", dest="package_name",
             required=False, default=HOST_PACKAGE_NAME,
-            help="Prefix name for host collection package")
+            help="Prefix name for host collection package, "
+                 "Default name is %s" % HOST_PACKAGE_NAME)
     parser_collect.set_defaults(func=collect_hosts)
 
     # Analysis Arguments

@@ -1,0 +1,5 @@
+hostname,ip,username,password,ssh_port,key_path,mac,vendor,check_status,os,version,tcp_ports,do_status
+,192.168.10.2,administrator@vsphere.local,your_vcenter_password,,,00:50:56:9f:03:f0,,check,Windows,Microsoft Windows 7 or Windows Server 2012,"80,88,135,139,389,443,445,514,636,2020,3389,8088,9009,9090",
+,192.168.10.6,root,your_esxi_password,443,,0c:c4:7a:e5:5d:20,,check,VMware,VMware ESXi Server 4.1,"22,80,427,443,902,5988,5989,8000,8080,8100,8300",
+,192.168.10.185,Administrator,your_windows_password,,,00:50:56:9a:6d:2e,,check,Windows,Microsoft Windows Server 2003 SP1 or SP2,"135,139,445,1028,3389",
+,192.168.10.201,root,your_linux_password,22,,ac:1f:6b:27:7f:e4,,check,Linux,Linux 2.6.32 - 3.9,"22,80,3306,4567,5000,5900,5901,5902,5903,5904,5906,5907,5910,5911,5915,8022,8080,9100",

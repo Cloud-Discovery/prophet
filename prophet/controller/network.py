@@ -93,7 +93,7 @@ class NetworkController(object):
                 logging.exception(e)
                 logging.warn("Analysis host %s failed." % host)
         hosts_pd = pd.DataFrame(data, columns=DEFAULT_HEADERS)
-        hosts_pd.to_csv(report_path)
+        hosts_pd.to_csv(report_path, index=False)
 
     def _scan(self):
         logging.info("Begin scaning %s..." % self.host)
