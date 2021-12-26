@@ -28,7 +28,7 @@ import paramiko
 import socket
 import tempfile
 
-from prophet.controller.lib.ansible_api import AnsibleApi
+from prophet.ansible_api import AnsibleApi
 from prophet.collector.base import BaseHostCollector
 
 

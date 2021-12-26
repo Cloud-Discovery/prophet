@@ -18,8 +18,7 @@ import logging
 import os
 import sys
 
-from prophet.controller.network import NetworkController
-#from prophet.controller.batch_job import BatchJob
+from prophet.scanner.network import NetworkController
 from prophet.collector.collector import HostCollector
 from prophet.utils import init_logging
 
