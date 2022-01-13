@@ -127,7 +127,7 @@ def parse_sys_args(argv):
             required=False, default=REPORT_NAME, help="Generate report name")
     parser_report.add_argument("--clean", action="store_true",
             dest="clean", required=False, default=False,
-            help="Generate report path")
+            help="Clean temp work dir or not, by default is not")
 
     parser_report.set_defaults(func=analysis_report)
 
