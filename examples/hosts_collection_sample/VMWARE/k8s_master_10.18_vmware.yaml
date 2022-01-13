@@ -1,0 +1,207 @@
+VMWARE_192.168.10.2:
+  os_type: VMWARE
+  results:
+    501abac9-a926-f8f5-1877-78519c06a756:
+      changeTrackingSupported: true
+      datastoreurl:
+        10.5-production-04:
+          url: /vmfs/volumes/5ede7664-6597c95b-384c-b8ca3af5a60e
+      disks_info:
+        6000C294-bf51-1fba-95b6-d7deff3ee184:
+          capacityInKB: 209715200
+          changeId: null
+          contentId: 14ec243b30f86d6d34c38d2b64b90d8d
+          deltaDiskFormat: null
+          diskMode: persistent
+          fileName: '[10.5-production-04] k8s_master_10.18/k8s_master_10.18.vmdk'
+          thinProvisioned: false
+      drs: false
+      esxi_host:
+        192.168.10.5:
+          datastore:
+            10.5-datastore1:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 292057776128
+              freeSpace: 291035414528
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 69201586814976
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: 68169720922112
+              multipleHostAccess: false
+              name: 10.5-datastore1
+              ssd: ''
+              type: VMFS
+              uncommitted: 0
+              url: ds:///vmfs/volumes/5ed91773-f3e6876f-d704-b8ca3af5a60e/
+            10.5-production-01:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 4000762036224
+              freeSpace: 3148011798528
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 69201586814976
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: 68169720922112
+              multipleHostAccess: false
+              name: 10.5-production-01
+              ssd: ''
+              type: VMFS
+              uncommitted: 109435457169
+              url: ds:///vmfs/volumes/5ede7599-bf838156-3020-b8ca3af5a60e/
+            10.5-production-02:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 4000762036224
+              freeSpace: 1230889811968
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 69201586814976
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: 68169720922112
+              multipleHostAccess: false
+              name: 10.5-production-02
+              ssd: ''
+              type: VMFS
+              uncommitted: 857226085442
+              url: ds:///vmfs/volumes/5ede75e1-6890b77b-0658-b8ca3af5a60e/
+            10.5-production-03:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 4000762036224
+              freeSpace: 3404906627072
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 69201586814976
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: 68169720922112
+              multipleHostAccess: false
+              name: 10.5-production-03
+              ssd: ''
+              type: VMFS
+              uncommitted: 361423437108
+              url: ds:///vmfs/volumes/5ede7637-1d939d53-0a02-b8ca3af5a60e/
+            10.5-production-04:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 4000762036224
+              freeSpace: 1777506189312
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 69201586814976
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: 68169720922112
+              multipleHostAccess: false
+              name: 10.5-production-04
+              ssd: ''
+              type: VMFS
+              uncommitted: 648503775084
+              url: ds:///vmfs/volumes/5ede7664-6597c95b-384c-b8ca3af5a60e/
+            10.5-production-05:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 511906414592
+              freeSpace: 50479497216
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 69201586814976
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: 68169720922112
+              multipleHostAccess: false
+              name: 10.5-production-05
+              ssd: ''
+              type: VMFS
+              uncommitted: 8770061372
+              url: ds:///vmfs/volumes/5ede76af-b94f9a2b-e54a-b8ca3af5a60e/
+            SHARED_NFS:
+              accessible: true
+              blockSizeMb: ''
+              capacity: 10992979238912
+              freeSpace: 10502758428672
+              local: ''
+              maintenanceMode: normal
+              maxFileSize: 70368744177664
+              maxMemoryFileSize: 70368744177664
+              maxPhysicalRDMFileSize: ''
+              maxVirtualDiskCapacity: 68169720922112
+              maxVirtualRDMFileSize: ''
+              multipleHostAccess: true
+              name: SHARED_NFS
+              ssd: ''
+              type: NFS
+              uncommitted: 2408637726720
+              url: ds:///vmfs/volumes/b1691c3f-ae62525b/
+          esxi_info:
+            MemorySize: 98258.4765625
+            SN: 8DGCZY1
+            build: '2494585'
+            cpuMhz: 2699
+            cpuModel: Intel(R) Xeon(R) CPU E5-2680 0 @ 2.70GHz
+            fullName: VMware ESXi 6.0.0 build-2494585
+            licenseProductName: VMware ESX Server
+            licenseProductVersion: '6.0'
+            model: PowerEdge R720
+            numCpuCores: 16
+            numCpuPkgs: 2
+            numCpuThreads: 32
+            numHBAs: 7
+            numNics: 4
+            osType: vmnix-x86
+            port: 443
+            vendor: Dell Inc.
+            version: 6.0.0
+          network:
+            VM Network:
+              accessible: true
+              ipPoolName: ''
+              name: VM Network
+            dvPortGroup:
+              accessible: true
+              ipPoolName: ''
+              name: dvPortGroup
+            dvSwitch-DVUplinks-35681:
+              accessible: true
+              ipPoolName: ''
+              name: dvSwitch-DVUplinks-35681
+      firmware: bios
+      guestFullName: "CentOS 4/5/6/7 (64 \u4F4D)"
+      guestId: centos64Guest
+      ha: false
+      hostName: null
+      ipAddress: null
+      locationId: 564d0a76-d602-52ef-908f-a80da5129d6c
+      logDirectory: '[10.5-production-04] k8s_master_10.18/'
+      memoryMB: 8192
+      name: k8s_master_10.18
+      network:
+        d26f5f0e72c211ec9fba005056b02908:
+          deviceName: VM Network
+          ipPoolId: null
+          macAddress: 00:50:56:9a:47:36
+      numCoresPerSocket: 2
+      numCpu: 4
+      numEthernetCards: 1
+      numVirtualDisks: 1
+      powerState: poweredOff
+      snapshotDirectory: '[10.5-production-04] k8s_master_10.18/'
+      suspendDirectory: '[10.5-production-04] k8s_master_10.18/'
+      toolsStatus: toolsNotInstalled
+      toolsVersion: 0
+      uuid: 421ab383-baf0-a7c0-7291-67398f8fd2ef
+      version: vmx-11
+      vmPathName: '[10.5-production-04] k8s_master_10.18/k8s_master_10.18.vmx'
+  tcp_ports: null

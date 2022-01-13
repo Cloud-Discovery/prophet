@@ -57,14 +57,20 @@ class WindowsCollector(BaseHostCollector):
                 collect_infos.update(self._parse_result(stdout))
 
         # Save to yaml file
-        save_values = {self.root_key: collect_infos}
+        save_values = {
+            self.root_key: {
+                "results": collect_infos,
+                "os_type": self.os_type,
+                "tcp_ports": self.tcp_ports
+            }
+        }
         self.save_to_yaml(self.collect_path, save_values)
 
         return [collect_infos]
 
     def _parse_result(self, result):
         """Save wmi result in dict
-        
+
         The structure is ClassName: Result, the classname is the
         first line of the returns. Save the other lines as a list.
         """

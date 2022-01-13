@@ -50,7 +50,13 @@ class LinuxCollector(BaseHostCollector):
         else:
             logging.info("Collect Linux %s info success" % self.ip)
 
-        save_values = {self.root_key: host_info}
+        save_values = {
+            self.root_key: {
+                "results": host_info,
+                "os_type": self.os_type,
+                "tcp_ports": self.tcp_ports
+            }
+        }
         self.save_to_yaml(self.collect_path, save_values)
 
         return [host_info]

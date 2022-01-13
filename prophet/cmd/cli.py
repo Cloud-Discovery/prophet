@@ -20,6 +20,7 @@ import sys
 
 from prophet.scanner.network import NetworkController
 from prophet.collector.collector import HostCollector
+from prophet.report.host_report import HostReporter
 from prophet.utils import init_logging
 
 VER = "v0.1.0"
@@ -33,6 +34,9 @@ SCAN_REPORT_NAME = "scan_results.csv"
 # Default package name
 HOST_PACKAGE_NAME = "hosts_collection"
 
+# Default report name
+REPORT_NAME = "analysis_report.csv"
+
 
 def scan_network(args):
     host = args.host
@@ -45,6 +49,7 @@ def scan_network(args):
     network = NetworkController(host, arg, output_path)
     network.generate_report()
 
+
 def collect_hosts(args):
     host_file = args.host_file
     output_path = args.output_path
@@ -56,11 +61,14 @@ def collect_hosts(args):
     host_collector.collect_hosts()
     host_collector.package()
 
+
 def analysis_report(args):
-    report_job = ReportJob(args.package_file,
-                           args.output_path,
-                           args.clean)
-    report_job.analysis()
+    host_report = HostReporter(args.package_file,
+                               args.output_path,
+                               args.clean,
+                               args.report_name)
+    host_report.analysis()
+
 
 def parse_sys_args(argv):
     """Parses commaond-line arguments"""
@@ -115,6 +123,8 @@ def parse_sys_args(argv):
                  "genreated by prophet-collect")
     parser_report.add_argument("--output-path", dest="output_path",
             required=True, help="Generate report path")
+    parser_report.add_argument("--report-name", dest="report_name",
+            required=False, default=REPORT_NAME, help="Generate report name")
     parser_report.add_argument("--clean", action="store_true",
             dest="clean", required=False, default=False,
             help="Generate report path")
@@ -126,7 +136,7 @@ def parse_sys_args(argv):
         sys.exit(1)
     else:
         return parser.parse_args(argv[1:])
- 
+
 def main():
     # NOTE(Ray): If there are speicial chars in vars, like Chinese
     # chars, something will be wrong if we don't set correct LANG,
@@ -135,6 +145,6 @@ def main():
     args = parse_sys_args(sys.argv)
     init_logging(args.debug, args.verbose, LOG_FILE, args.output_path)
     args.func(args)
- 
+
 if __name__ == "__main__":
     main()

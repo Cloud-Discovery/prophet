@@ -1,6 +1,39 @@
 CHANGES
 =======
 
+* Move network controller to scanner
+* Add scan\_results.csv sample file in examples dir
+* Refactor vmware collector
+* Refactor projects using driver way
+* Optimize summary for collection
+* Optimize for argparse and logging init
+* Update to python3 in Dockerfile
+* Add LICENSE for this project
+* Push aliyun dockerhub after build
+* Fix docker tag add oneprocloud
+* Fix docker-image.yml structure
+* Debug docker build commit
+* Debug docker image build and push
+* Debug docker build yaml
+* Create docker-image.yml for build and push
+* Show Chinese README by default
+* Add documents for Open Source Project
+* Update pip mirror conf
+* Add sshpass during docker build
+* Fix bug when disk is VirtualDisk.RawDiskMappingVer1BackingInfo
+* Fix network device is DistributedVirtualPortBackingInfo
+* Remove get name from summary
+* Fix when vm.config is empty
+* Replace pip local mirror to tsinghua
+* Optimize VMware vm collection and report show
+* Package log file and optimize vmware
+* Fix Dockerfile and fix vmware bug
+* Fix bug and optimize for VMware collection
+* Add dockerfile template for new CI
+* Add yum repo for prophet
+* Update collector and generate mac info
+* Remove sensitive file and message in generate result
+* Seperate collect and analysis logical
 * Update wmi version
 * Move compiler
 * Add Language en\_US.utf8

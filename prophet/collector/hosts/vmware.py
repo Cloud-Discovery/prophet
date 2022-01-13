@@ -403,14 +403,25 @@ class VMwareCollector(BaseHostCollector):
 
                 filename = "%s_%s.yaml" % (vm.config.name, "vmware")
                 yamlfile = os.path.join(self.base_path, filename)
-                self.save_to_yaml(yamlfile, vms_info)
+                # NOTE(Ray): The tcp ports is the ports open on VMware
+                # vCenter or ESXi, so we don't need to add tcp ports
+                # For further development, we may read tcp ports from
+                # our scan results to get tcp ports for VMs
+                save_values = {
+                    self.root_key: {
+                        "results": vms_info,
+                        "os_type": self.os_type,
+                        "tcp_ports": None
+                    }
+                }
+                self.save_to_yaml(yamlfile, save_values)
 
                 self.success_vms.append(vm_name)
             except Exception as e:
                 self.failed_vms.append(vm_name)
                 logging.warn("Skip to get VM %s info, due to:")
                 logging.exception(e)
-            
+
 
     def _get_vm_info(self, esxi_obj, cluster_obj, vm):
         """Get VM summary information"""
@@ -424,7 +435,7 @@ class VMwareCollector(BaseHostCollector):
         ha, drs = self._is_ha_drs_enabled(cluster_obj)
 
         vm_info = {
-            "esxi_host": esxi_host,
+            "esxi_host": {esxi_host: self._esxis_info[esxi_host]},
             "name": vm.config.name,
             "memoryMB": vm.config.hardware.memoryMB,
             "numCpu": vm.config.hardware.numCPU,
@@ -490,7 +501,7 @@ class VMwareCollector(BaseHostCollector):
                 self._esxis_info[esxi.name] = {
                     "esxi_info": self._get_esxi_summary(esxi),
                     "datastore": self._get_esxi_datastore_info(esxi),
-                    "network": self._get_esxi_network_info(esxi) 
+                    "network": self._get_esxi_network_info(esxi)
                 }
                 self.success_esxis.append(esxi.name)
             except Exception as e:
@@ -554,6 +565,8 @@ class VMwareCollector(BaseHostCollector):
         logging.info("Success to get ESXi %s "
                      "network %s" % (esxi.name, network_info))
 
+        return network_info
+
     def _get_esxi_datastore_info(self, esxi):
         logging.info("Trying to get ESXi %s "
                      "datastore info: %s" % (
@@ -588,3 +601,5 @@ class VMwareCollector(BaseHostCollector):
 
         logging.info("Success to get ESXi %s datastore "
                      "info: %s" % (esxi.name, datastore_info))
+
+        return datastore_info

@@ -28,6 +28,15 @@ class BaseHostCollector(object):
     """Base class for host collector
 
     This may extends more base class for different resources in future.
+
+    Yaml Data Structure:
+      {
+        "ostype_ip": {
+          "results": {results for collection},
+          "os_type": "os_type"
+          "tcp_ports": "tcp_ports"
+        }
+      }
     """
 
     def __init__(self, ip, username, password, ssh_port, key_path,
