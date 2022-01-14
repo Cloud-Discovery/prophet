@@ -1,4 +1,4 @@
-<p align="center"><a href="https://oneprocloud.com"><img src="https://oneprocloud.com/_nuxt/img/slider-tit.6a3d60f.png" alt="HyperBDR" width="300" /></a></p>
+<p align="center"><a href="https://oneprocloud.com"><img src="./docs/images/prophet-logo.png" alt="Prophet" width="300" /></a></p>
 <h3 align="center">资源自动采集分析工具集，云迁移/云灾备必备的调研工具</h3>
 
 <p align="center">
