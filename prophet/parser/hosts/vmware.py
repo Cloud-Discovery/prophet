@@ -154,5 +154,6 @@ class VMwareParser(BaseHostParser):
         return {
             "vt_platform": self._esxi_info["licenseProductName"],
             "vt_platform_ver": self._esxi_info["fullName"],
-            "vt_esxi": self._esxi_name
+            "vt_esxi": self._esxi_name,
+            "vt_cbt": self._host_info["changeTrackingSupported"]
         }

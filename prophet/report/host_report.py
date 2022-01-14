@@ -55,7 +55,8 @@ MAPPING = (
     ("networks.nics", "网卡信息"),
     ("vt.vt_platform", "虚拟化类型"),
     ("vt.vt_platform_ver", "虚拟化版本"),
-    ("vt.vt_esxi", "ESXi服务器")
+    ("vt.vt_esxi", "ESXi服务器"),
+    ("vt.vt_cbt", "是否支持CBT")
 )
 
 # When generate report, all these fields value will converted to GB
