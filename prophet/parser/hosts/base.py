@@ -20,8 +20,8 @@ Inherit this class and implement each `parser` method in sub class.
 import logging
 
 # Boot type
-BIOS_BOOT = "bios"
-EFI_BOOT = "efi"
+BIOS_BOOT = "BIOS"
+EFI_BOOT = "EFI"
 
 # Default sign for uefi boot
 LINUX_EFI_MOUNT_POINT = "/boot/efi"
