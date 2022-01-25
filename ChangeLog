@@ -1,6 +1,14 @@
 CHANGES
 =======
 
+v1.0.0
+------
+
+* Update README.md for new prophet logo
+* Support show vmware CBT support
+* Update README.md
+* Update README for new report
+* Refactor host report generation
 * Move network controller to scanner
 * Add scan\_results.csv sample file in examples dir
 * Refactor vmware collector

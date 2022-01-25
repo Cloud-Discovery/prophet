@@ -204,7 +204,7 @@ class HostCollector(object):
         # collection hosts
         logging.info("Saved collection "
                      "report to %s" % self.collection_report_path)
-                
+
     def _prepare(self):
         # Validate host file is exists
         if not os.path.exists(self.host_file):
@@ -225,6 +225,10 @@ class HostCollector(object):
             shutil.rmtree(self.collection_path)
             logging.info("Delete existing host collection "
                          "path %s Succesfully" % self.collection_path)
+
+        if not os.path.exists(self.collection_path):
+            logging.info("Creating collection path %s..." % self.collection_path)
+            os.makedirs(self.collection_path)
 
     def _is_need_check(self, check_status, do_status):
         """Return True is host need to do collection"""
