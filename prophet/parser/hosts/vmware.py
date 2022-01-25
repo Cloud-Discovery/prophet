@@ -126,7 +126,7 @@ class VMwareParser(BaseHostParser):
         }
 
     def _get_boot_type(self):
-        boot_type = self._host_info["firmware"].upper()
+        boot_type = self._host_info["firmware"]
         if boot_type == BIOS_BOOT:
             return BIOS_BOOT
         else:
