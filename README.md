@@ -38,6 +38,26 @@ prophet是一个自动化采集、分析的工具集，目前支持对物理机�
 
 ### 源码安装
 
+#### 前提条件
+
+- Python环境运行版本
+  
+  python3 以上版本，安装python3 pbr的开发包
+
+- 依赖包安装
+
+  - RHEL & CentOS
+  
+    提前安装配置epel仓库源，在执行安装依赖包指令，目前暂时只提供RHEL&CentOS版本，后续持续更新
+
+    ```
+    yum install -y epel-release
+    cd prophet/
+    yum install -y nmap sshpass
+      ```
+
+#### 源码下载安装
+
 ```
 git clone https://github.com/Cloud-Discovery/prophet
 
@@ -45,17 +65,39 @@ cd prophet
 virtualenv venv
 source venv/bin/activate
 
+pip install -U pip
 pip install -r requirements.txt
 pip install .
+
+# 安装远程 windows 执行所需wmi模块
+yum install -y ./tools/wmi-1.3.14-4.el7.art.x86_64.rpm
 ```
 
 ### 容器方式
 
-目前该项目每次提交后都会自动进行构建并推送到国内容器源中，可以直接使用
+目前该项目每次提交后都会自动进行构建并推送到国内容器源中，可以直接使用，首先确保本地运行环境已经安装docker环境。
 
-```
-docker pull registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
-```
+- 下载prophet容器镜像
+
+  ```
+  docker pull registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
+  ```
+
+- 运行prophet容器服务
+
+  ```
+  docker run -d -ti --name prophet registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
+  ```
+
+- 访问prophet容器
+
+  容器运行后，即可访问到容器内容进行后续操作使用
+
+  ```
+  docker exec -ti prophet bash
+
+  prophet-cli {scan,collect,report}
+  ```
 
 ## 使用说明
 
@@ -167,7 +209,7 @@ optional arguments:
 
 
 ```
-prophet-cli collect --host-file /tmp/scan_results.csv --output-path /tmp
+prophet-cli collect --host-file /tmp/scan_hosts.csv --output-path /tmp
 ```
 
 #### 采集结果说明
@@ -175,15 +217,15 @@ prophet-cli collect --host-file /tmp/scan_results.csv --output-path /tmp
 采集目录结构
 
 ```
-host_collection_info
+hosts_collection
 |-- LINUX -> Linux主机采集信息
 |-- VMWARE -> VMWare主机采集信息
 `-- WINDOWS -> Windows主机采集信息
 |-- prophet.log -> 采集过程中的日志，便于对于未知场景分析
-|-- scan_results.csv -> 采集的主机文件，含开放端口信息
+|-- scan_hosts.csv -> 采集的主机文件，含开放端口信息
 ```
 
-另外在输出目录中会生成host_collection_info_xxxxxxx.zip文件，该文件为最终用于分析的压缩文件。
+另外在输出目录中会生成hosts_collection_xxxxxxx.zip文件，该文件为最终用于分析的压缩文件。
 
 ### (重构中)功能三: 分析并输出报告
 
@@ -210,7 +252,7 @@ optional arguments:
 #### 示例：分析并输出报告
 
 ```
-prophet-cli -d -v report --package-file /tmp/host_collection_info_20211215202459.zip --output-path /tmp
+prophet-cli -d -v report --package-file /tmp/hosts_collection_20211215202459.zip --output-path /tmp
 ```
 
 #### 示例：分析报告
