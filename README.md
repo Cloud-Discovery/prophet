@@ -12,20 +12,20 @@
 
 ## 目录
 
-- [项目说明](#项目说明)
-- [安装说明](#安装说明)
-- [使用说明](#使用说明)
-- [如何贡献](#如何贡献)
-- [贡献者](#贡献者)
-- [协议说明](#协议说明)
+* [项目说明](#项目说明)
+* [安装说明](#安装说明)
+* [使用说明](#使用说明)
+* [如何贡献](#如何贡献)
+* [贡献者](#贡献者)
+* [协议说明](#协议说明)
 
 ## 项目说明
 
-prophet是一个自动化采集、分析的工具集，目前支持对物理机、VMware环境的采集和分析，未来将扩展至云平台资源、存储、网络等多种资源。目前主要应用与云迁移与云灾备前期技术调研，主要对源端主机的基本情况进行采集，通过技术指标的比对，确保被调研的源端主机能够正确被工具正确迁移或灾备,同时根据数据量，预测数据传输时间。该项目目前已经在多个实际的云迁移和云灾备项目中得到验证，可以放心使用。
+Prophet是一个自动化采集、分析的工具集，目前支持对物理机、VMware环境的采集和分析，未来将扩展至云平台资源、存储、网络等多种资源。目前主要应用与云迁移与云灾备前期技术调研，主要对源端主机的基本情况进行采集，通过技术指标的比对，确保被调研的源端主机能够正确被工具正确迁移或灾备,同时根据数据量，预测数据传输时间。该项目目前已经在多个实际的云迁移和云灾备项目中得到验证，可以放心使用。
 
 该项目未来发展的愿景是提供一站式调研平台，包括但不限于如下资源：各种云平台资源使用状况、文件存储、对象存储、容器平台、大数据平台、中间件、数据库等。同时也将提供蓝图画板，方便在项目前期进行方案编写使用，降低云迁移与云灾备过于冗长的前期调研周期。
 
-目前prophet主要有以下功能组成：
+目前Prophet主要有以下功能组成：
 
 * 通过nmap指令扫描全网存活的主机，并尽量通过包信息分析主机的基本情况
 * (稳定)通过VMWare API接口采集主机的详细信息，包含计算、存储和网络等与主机迁移
@@ -36,18 +36,52 @@ prophet是一个自动化采集、分析的工具集，目前支持对物理机�
 
 ## 安装说明
 
+推荐使用容器方式使用Prophet，减少环境依赖。
+
+### 容器方式
+
+目前该项目每次提交后都会自动进行构建并推送到国内容器源中，可以直接使用，首先确保本地运行环境已经安装docker环境。
+
+* 下载prophet容器镜像
+
+  ```
+  docker pull \
+    registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
+  ```
+
+* 运行prophet容器服务
+
+  ```
+  docker run \
+    -d \
+    -ti \
+    --name prophet \
+    registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
+  ```
+
+* 访问prophet容器
+
+  容器运行后，即可访问到容器内容进行后续操作使用
+
+  ```
+  docker exec -ti prophet bash
+
+  prophet-cli {scan,collect,report}
+  ```
+
+
 ### 源码安装
 
 #### 前提条件
 
-- Python环境运行版本
-  
+* Python环境运行版本
+
   python3 以上版本，安装python3 pbr的开发包
 
-- 依赖包安装
+* 依赖包安装
 
-  - RHEL & CentOS
-  
+  * RHEL & CentOS
+
     提前安装配置epel仓库源，在执行安装依赖包指令，目前暂时只提供RHEL&CentOS版本，后续持续更新
 
     ```
@@ -72,32 +106,6 @@ pip install .
 # 安装远程 windows 执行所需wmi模块
 yum install -y ./tools/wmi-1.3.14-4.el7.art.x86_64.rpm
 ```
-
-### 容器方式
-
-目前该项目每次提交后都会自动进行构建并推送到国内容器源中，可以直接使用，首先确保本地运行环境已经安装docker环境。
-
-- 下载prophet容器镜像
-
-  ```
-  docker pull registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
-  ```
-
-- 运行prophet容器服务
-
-  ```
-  docker run -d -ti --name prophet registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
-  ```
-
-- 访问prophet容器
-
-  容器运行后，即可访问到容器内容进行后续操作使用
-
-  ```
-  docker exec -ti prophet bash
-
-  prophet-cli {scan,collect,report}
-  ```
 
 ## 使用说明
 
