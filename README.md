@@ -181,6 +181,7 @@ prophet-cli scan --host 192.168.10.2-50 --output-path /tmp/
 
 注意：
 
+* 如果希望扫描的主机，则需要将check_status修改为check，否则不进行检查
 * 如果是VMware的虚拟机，则只会通过所在的ESXi主机进行扫描
 * 如果是Windows主机，需要Administrator用户进行扫描
 * 采集主机如果成功，则再次运行脚本时不会再进行采集，除非用户指定force-check参数
