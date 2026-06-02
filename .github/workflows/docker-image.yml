@@ -22,7 +22,11 @@ jobs:
       run: docker tag oneprocloud/prophet-backend:latest registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/prophet-backend:latest
       
     - name: Login dockerhub
-      run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+      env:
+        USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      run: |
+        docker login -u "$USERNAME" -p "$TOKEN"
       
     - name: Push prophet-frontent to dockerhub
       run: docker push oneprocloud/prophet-frontent:latest
@@ -31,7 +35,11 @@ jobs:
       run: docker push oneprocloud/prophet-backend:latest
       
     - name: Login Aliyun dockerhub
-      run: docker login -u ${{ secrets.ALIYUN_DOCKERHUB_USERNAME }} -p ${{ secrets.ALIYUN_DOCKERHUB_PASSWORD }} registry.cn-beijing.aliyuncs.com
+      env:
+        USERNAME: ${{ secrets.ALIYUN_DOCKERHUB_USERNAME }}
+        PASSWORD: ${{ secrets.ALIYUN_DOCKERHUB_PASSWORD }}
+      run: |
+        docker login -u "$USERNAME" -p "$PASSWORD" registry.cn-beijing.aliyuncs.com
       
     - name: Push prophet-frontent to aliyun dockerhub
       run: docker push registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/prophet-frontent:latest
