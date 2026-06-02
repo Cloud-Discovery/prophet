@@ -16,10 +16,10 @@ jobs:
       run: docker build . --file Dockerfile.backend --tag oneprocloud/prophet-backend:latest
       
     - name: Tag frontent Aliyun
-      run: docker tag oneprocloud/cloud-discovery-prophet:latest registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/prophet-frontent:latest
+      run: docker tag oneprocloud/prophet-frontent:latest registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/prophet-frontent:latest
       
     - name: Tag backend Aliyun
-      run: docker tag oneprocloud/cloud-discovery-prophet:latest registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/prophet-backend:latest
+      run: docker tag oneprocloud/prophet-backend:latest registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/prophet-backend:latest
       
     - name: Login dockerhub
       run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
