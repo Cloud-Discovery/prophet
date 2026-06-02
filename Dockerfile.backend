@@ -1,0 +1,57 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    FLASK_APP=app.py \
+    FLASK_ENV=production 
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nmap \
+    sshpass \
+    openssh-client \
+    curl \
+    supervisor \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY tools/ /app/tools/
+
+RUN if [ -f /app/tools/wmi-1.3.14-4.el7.art.x86_64.rpm ]; then \
+    apt-get update && apt-get install -y --no-install-recommends alien && \
+    cd /app/tools && \
+    alien -d wmi-1.3.14-4.el7.art.x86_64.rpm && \
+    dpkg -i wmi_*.deb || true && \
+    apt-get install -f -y && \
+    rm -f wmi_*.deb && \
+    apt-get purge -y alien && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo "WMI client (wmic) installed successfully"; \
+    else \
+    echo "Warning: wmi RPM package not found at /app/tools/wmi-1.3.14-4.el7.art.x86_64.rpm"; \
+    echo "wmic command may not be available for Windows host collection"; \
+    fi
+
+RUN mkdir -p /var/lib/redis /etc/redis /app/logs /app/uploads /app/data
+
+COPY . .
+
+COPY docker/backend/start.sh /start.sh
+COPY docker/backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN chmod +x /start.sh
+
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:5000/api/v1/health || exit 1
+
+CMD ["/start.sh"]

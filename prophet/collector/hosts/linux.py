@@ -44,22 +44,72 @@ class LinuxCollector(BaseHostCollector):
                                                        host_info))
         logging.info("Collected host %s info" % self.ip)
 
-        if not host_info["success"]:
-            raise Exception("Collect Linux %s failed, please "
-                            "check yaml file for detailed" % self.ip)
+        # Check if collection was successful
+        # host_info structure: {"success": {host: result._result}, "failed": {}, "unreachable": {}}
+        success_dict = host_info.get("success", {})
+        failed_dict = host_info.get("failed", {})
+        unreachable_dict = host_info.get("unreachable", {})
+        
+        logging.debug("Success dict: %s, keys: %s" % (success_dict, list(success_dict.keys()) if success_dict else []))
+        logging.debug("Failed dict: %s, keys: %s" % (failed_dict, list(failed_dict.keys()) if failed_dict else []))
+        logging.debug("Unreachable dict: %s, keys: %s" % (unreachable_dict, list(unreachable_dict.keys()) if unreachable_dict else []))
+        
+        if not success_dict or len(success_dict) == 0:
+            # Check if there are failed or unreachable hosts
+            error_msg = "Collect Linux %s failed" % self.ip
+            if failed_dict:
+                error_msg += ". Failed hosts: %s" % list(failed_dict.keys())
+                # Log failed details
+                for host, result in failed_dict.items():
+                    if isinstance(result, dict):
+                        error_msg += ". Error: %s" % result.get('msg', str(result))
+            if unreachable_dict:
+                error_msg += ". Unreachable hosts: %s" % list(unreachable_dict.keys())
+                # Log unreachable details
+                for host, result in unreachable_dict.items():
+                    if isinstance(result, dict):
+                        error_msg += ". Error: %s" % result.get('msg', str(result))
+            
+            logging.error("Collection failed for %s: %s" % (self.ip, error_msg))
+            raise Exception(error_msg)
         else:
             logging.info("Collect Linux %s info success" % self.ip)
 
+        # Extract the actual result data from host_info
+        # host_info structure: {"success": {host: result._result}, "failed": {}, "unreachable": {}}
+        success_results = host_info.get("success", {})
+        if not success_results:
+            raise Exception("No successful results from Ansible collection for %s" % self.ip)
+        
+        # Get the result for this host (should be the only one in success dict)
+        # The result is already result._result from ansible_api.run_task()
+        host_result = list(success_results.values())[0] if success_results else None
+        if not host_result:
+            raise Exception("No result data found for host %s" % self.ip)
+        
+        # Extract the actual ansible facts from the result
+        # The result structure from ansible_api: result._result contains the actual data
+        # result._result structure: {"ansible_facts": {...}, ...}
+        ansible_facts = {}
+        if isinstance(host_result, dict):
+            ansible_facts = host_result.get('ansible_facts', host_result)
+        else:
+            # Fallback: use the result as-is
+            ansible_facts = host_result
+        
+        # Return data directly instead of saving to YAML
         save_values = {
             self.root_key: {
-                "results": host_info,
+                "results": ansible_facts,
                 "os_type": self.os_type,
                 "tcp_ports": self.tcp_ports
             }
         }
-        self.save_to_yaml(self.collect_path, save_values)
-
-        return [host_info]
+        
+        # Don't save to YAML file anymore - return data directly
+        # self.save_to_yaml(self.collect_path, save_values)
+        
+        return save_values
 
     def _precheck(self):
         logging.info("Checking %s SSH info..." % self.ip)

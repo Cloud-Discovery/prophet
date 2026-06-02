@@ -31,6 +31,7 @@ import sys
 import telnetlib
 import uuid
 import yaml
+import ssl
 
 from pyVim import connect
 from pyVmomi import vmodl
@@ -81,14 +82,19 @@ class VMwareCollector(BaseHostCollector):
             "debug": []
         }
 
-    def collect(self):
+    def collect(self, vm_callback=None, max_workers=5):
         """Get all VMware related information
 
         If the specify ip is vCenter, first get vCenter information,
         then get exsi later. If it's only esxi, then just save the
         esxi information.
 
-        After that get all VMs and save to files.
+        After that get all VMs and return all data.
+        
+        Args:
+            vm_callback: Optional callback function(vm_data) called after each VM is collected.
+                         This allows real-time processing while collecting VMs.
+            max_workers: Maximum number of concurrent workers for VM collection (default: 5)
         """
 
         # Try to connect to server first
@@ -109,12 +115,33 @@ class VMwareCollector(BaseHostCollector):
         else:
             vmware_info = self._esxis_info
 
-        filename = "%s_%s.yaml" % (self.ip, server_type)
-        yamlfile = os.path.join(self.base_path, filename)
-        self.save_to_yaml(yamlfile, vmware_info)
+        # Don't save to YAML file anymore - return data directly
+        # filename = "%s_%s.yaml" % (self.ip, server_type)
+        # yamlfile = os.path.join(self.base_path, filename)
+        # self.save_to_yaml(yamlfile, vmware_info)
 
-        # Begin to collect all VMs
-        self._get_vms_info()
+        # Begin to collect all VMs (with callback for real-time sync)
+        vms_info = self._get_vms_info(callback=vm_callback, max_workers=max_workers)
+        
+        # Store vms_info in instance for potential access by sync service
+        self._vms_info = vms_info
+        
+        # Combine all collected data
+        save_values = {
+            self.root_key: {
+                "results": {
+                    "server_info": vmware_info,
+                    "vms": vms_info
+                },
+                "os_type": self.os_type,
+                "tcp_ports": None
+            }
+        }
+        
+        # Store collected data in instance for potential access by sync service
+        self.collected_data = save_values
+        
+        return save_values
 
     def connect(self):
         """Connect to vCenter or ESXi"""
@@ -127,12 +154,18 @@ class VMwareCollector(BaseHostCollector):
                       % (self.ip, self.ssh_port,
                          self.username, self.password))
         logging.info("Start connect %s vmware host..." % self.ip)
+        
+        # For pyvmomi 8.0+, SmartConnectNoSSL is removed
+        # Use SmartConnect with disableSslCertValidation parameter
         if self.disable_ssl_verification:
-            service_instance = connect.SmartConnectNoSSL(
+            # Create unverified SSL context
+            context = ssl._create_unverified_context()
+            service_instance = connect.SmartConnect(
                 host=self.ip,
                 user=self.username,
                 pwd=self.password,
-                port=int(self.ssh_port))
+                port=int(self.ssh_port),
+                sslContext=context)
         else:
             service_instance = connect.SmartConnect(
                 host=self.ip,
@@ -151,7 +184,9 @@ class VMwareCollector(BaseHostCollector):
         except Exception as error:
             logging.error("Check %s:%s failed, due to %s"
                           % (self.ip, self.ssh_port, error))
-            sys.exit()
+            raise ConnectionError(
+                f"Unable to reach {self.ip}:{self.ssh_port}: {error}"
+            ) from error
         else:
             logging.info("Host %s:%s check successful."
                          % (self.ip, self.ssh_port))
@@ -351,7 +386,17 @@ class VMwareCollector(BaseHostCollector):
         logging.info("Get %s vm all nets info successful." % vm.config.name)
         return network_info
 
-    def _get_vms_info(self):
+    def _get_vms_info(self, callback=None, max_workers=5):
+        """Get VMs detail information with concurrent collection
+        
+        Args:
+            callback: Optional callback function(vm_data) called after each VM is collected.
+                      If provided, VM data will be passed to callback immediately after collection.
+            max_workers: Maximum number of concurrent workers for VM collection (default: 5)
+        
+        Returns:
+            dict: All collected VMs info {vmid: vm_data}
+        """
         logging.info("Trying to get VMs detail...")
 
         esxi_obj = self._get_content_obj(
@@ -362,19 +407,21 @@ class VMwareCollector(BaseHostCollector):
                 self._content, [vim.VirtualMachine])
         logging.debug("VMs object: %s" % vms_obj)
 
-        logging.info("Trying to get VMs total "
-                     "count is %s" % len(vms_obj))
-        for vm in vms_obj:
-            vms_info = {}
+        total_vms = len(vms_obj)
+        logging.info("Trying to get VMs total count is %s" % total_vms)
+        
+        # Prepare VM collection function that can be called concurrently
+        def collect_single_vm(vm):
+            """Collect information for a single VM"""
+            import threading
+            thread_name = threading.current_thread().name
             vm_name = None
-
-            logging.info("Current vm object is %s" % vm)
-            # NOTE(Ray): vm.config is very important when we try to
-            # get data, we found some fields is missing in some env.
-            # So we log this object into log file for further analysis
-            logging.info("VM config object is: %s" % vm.config)
-
+            vmid = None
+            
             try:
+                # NOTE(Ray): vm.config is very important when we try to
+                # get data, we found some fields is missing in some env.
+                # So we log this object into log file for further analysis
                 # NOTE(Ray): Normally instanceUuid should be
                 # exsits in vm.config, but we found in some real
                 # env, it's not true. To work around, we get this
@@ -388,39 +435,119 @@ class VMwareCollector(BaseHostCollector):
 
                 vm_host = vm.summary.runtime.host
 
-                logging.info("Trying to get VM %s info..." % vm_name)
+                logging.info(f"[Thread {thread_name}] Collecting VM: {vm_name} (UUID: {vmid})")
 
                 if vm_host in esxi_obj:
-                    vms_info[vmid] = self._get_vm_info(
+                    vm_data = self._get_vm_info(
                             esxi_obj, cluster_obj, vm)
+                    
+                    logging.info(f"[Thread {thread_name}] Successfully collected VM: {vm_name}")
+                    return {
+                        'success': True,
+                        'vmid': vmid,
+                        'vm_name': vm_name,
+                        'vm_data': vm_data,
+                        'thread_name': thread_name
+                    }
                 else:
                     logging.warn(
-                            "Skip to get VM %s info, due to VM "
-                            "is in ESXi host %s" % (vm_name, vm_host))
-
-                logging.info(
-                        "Success to get VM %s info" % vm_name)
-
-                filename = "%s_%s.yaml" % (vm.config.name, "vmware")
-                yamlfile = os.path.join(self.base_path, filename)
-                # NOTE(Ray): The tcp ports is the ports open on VMware
-                # vCenter or ESXi, so we don't need to add tcp ports
-                # For further development, we may read tcp ports from
-                # our scan results to get tcp ports for VMs
-                save_values = {
-                    self.root_key: {
-                        "results": vms_info,
-                        "os_type": self.os_type,
-                        "tcp_ports": None
+                            f"[Thread {thread_name}] Skip to get VM {vm_name} info, due to VM "
+                            "is in ESXi host %s" % vm_host)
+                    return {
+                        'success': False,
+                        'vmid': vmid,
+                        'vm_name': vm_name,
+                        'error': f"VM host {vm_host} not in ESXi objects",
+                        'thread_name': thread_name
                     }
-                }
-                self.save_to_yaml(yamlfile, save_values)
-
-                self.success_vms.append(vm_name)
             except Exception as e:
-                self.failed_vms.append(vm_name)
-                logging.warn("Skip to get VM %s info, due to:")
+                logging.warn(f"[Thread {thread_name}] Skip to get VM {vm_name or 'unknown'} info, due to:")
                 logging.exception(e)
+                return {
+                    'success': False,
+                    'vmid': vmid,
+                    'vm_name': vm_name,
+                    'error': str(e),
+                    'thread_name': thread_name
+                }
+        
+        # Use concurrent collection if max_workers > 1 and we have multiple VMs
+        if max_workers > 1 and total_vms > 1:
+            logging.info(f"🚀 Starting CONCURRENT VM collection with {max_workers} worker threads for {total_vms} VMs...")
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            import threading
+            import time
+            
+            all_vms_info = {}
+            lock = threading.Lock()  # Lock for thread-safe operations
+            active_threads = set()  # Track active threads
+            completed_count = [0]  # Use list for thread-safe counter
+            start_time = time.time()
+            
+            with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="VMCollector") as executor:
+                # Submit all VM collection tasks
+                future_to_vm = {executor.submit(collect_single_vm, vm): vm for vm in vms_obj}
+                logging.info(f"📤 Submitted {len(future_to_vm)} VM collection tasks to thread pool")
+                
+                # Process completed tasks
+                for future in as_completed(future_to_vm):
+                    result = future.result()
+                    thread_name = result.get('thread_name', 'unknown')
+                    
+                    if result['success']:
+                        vmid = result['vmid']
+                        vm_name = result['vm_name']
+                        vm_data = result['vm_data']
+                        
+                        # Thread-safe update to all_vms_info
+                        with lock:
+                            all_vms_info[vmid] = vm_data
+                            self.success_vms.append(vm_name)
+                            completed_count[0] += 1
+                            active_threads.add(thread_name)
+                        
+                        logging.info(f"✅ [{thread_name}] Completed VM {vm_name} ({completed_count[0]}/{total_vms})")
+                        
+                        # Call callback if provided (callback should handle thread safety if needed)
+                        if callback and callable(callback):
+                            try:
+                                callback(vm_data)
+                            except Exception as callback_error:
+                                logging.error(f"❌ [{thread_name}] Callback error for VM {vm_name}: {callback_error}")
+                    else:
+                        vm_name = result.get('vm_name', 'unknown')
+                        with lock:
+                            self.failed_vms.append(vm_name)
+                            completed_count[0] += 1
+                        logging.warning(f"❌ [{thread_name}] Failed to collect VM {vm_name}: {result.get('error', 'Unknown error')} ({completed_count[0]}/{total_vms})")
+            
+            elapsed_time = time.time() - start_time
+            active_thread_count = len(active_threads)
+            logging.info(f"🎉 Concurrent collection completed! Processed {completed_count[0]} VMs using {active_thread_count} threads in {elapsed_time:.2f} seconds")
+        else:
+            # Sequential collection (original logic)
+            logging.info("Using sequential VM collection...")
+            all_vms_info = {}
+            for vm in vms_obj:
+                result = collect_single_vm(vm)
+                if result['success']:
+                    vmid = result['vmid']
+                    vm_name = result['vm_name']
+                    vm_data = result['vm_data']
+                    all_vms_info[vmid] = vm_data
+                    self.success_vms.append(vm_name)
+                    
+                    # If callback is provided, call it immediately after collecting this VM
+                    if callback and callable(callback):
+                        try:
+                            callback(vm_data)
+                        except Exception as callback_error:
+                            logging.error(f"Callback error for VM {vm_name}: {callback_error}")
+                else:
+                    vm_name = result.get('vm_name', 'unknown')
+                    self.failed_vms.append(vm_name)
+        
+        return all_vms_info
 
 
     def _get_vm_info(self, esxi_obj, cluster_obj, vm):
@@ -434,8 +561,35 @@ class VMwareCollector(BaseHostCollector):
 
         ha, drs = self._is_ha_drs_enabled(cluster_obj)
 
+        # Get ESXi info from dictionary, or create a minimal entry if not found
+        # This can happen if _get_esxi_info() was not called before _get_vm_info()
+        esxi_info = self._esxis_info.get(esxi_host)
+        if not esxi_info:
+            # Create a minimal ESXi info entry if not in dictionary
+            logging.warning(f"ESXi host {esxi_host} not found in _esxis_info, creating minimal entry")
+            esxi_host_obj = esxi_obj[obj_index]
+            try:
+                esxi_summary = esxi_host_obj.summary
+                esxi_info = {
+                    "esxi_info": {
+                        "vendor": getattr(esxi_summary.hardware, 'vendor', '') if hasattr(esxi_summary, 'hardware') else '',
+                        "model": getattr(esxi_summary.hardware, 'model', '') if hasattr(esxi_summary, 'hardware') else '',
+                        "fullName": getattr(esxi_summary.config.product, 'fullName', '') if hasattr(esxi_summary, 'config') and hasattr(esxi_summary.config, 'product') else '',
+                        "version": getattr(esxi_summary.config.product, 'version', '') if hasattr(esxi_summary, 'config') and hasattr(esxi_summary.config, 'product') else '',
+                    },
+                    "datastore": {},
+                    "network": {}
+                }
+            except Exception as e:
+                logging.warning(f"Failed to create minimal ESXi info for {esxi_host}: {e}")
+                esxi_info = {
+                    "esxi_info": {},
+                    "datastore": {},
+                    "network": {}
+                }
+
         vm_info = {
-            "esxi_host": {esxi_host: self._esxis_info[esxi_host]},
+            "esxi_host": {esxi_host: esxi_info},
             "name": vm.config.name,
             "memoryMB": vm.config.hardware.memoryMB,
             "numCpu": vm.config.hardware.numCPU,

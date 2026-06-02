@@ -65,18 +65,36 @@ class LinuxParser(BaseHostParser):
 
     def parse_os(self):
         return {
-            "os": self._host_info["ansible_distribution"],
-            "os_version": self._host_info["ansible_distribution_version"],
-            "os_bit": self._host_info["ansible_architecture"],
-            "os_kernel": self._host_info["ansible_kernel"]
+            "os": "Linux",
+            "distribution": self._host_info.get("ansible_distribution", ""),
+            "os_version": self._host_info.get("ansible_distribution_version", ""),
+            "os_bit": self._host_info.get("ansible_architecture", ""),
+            "os_kernel": self._host_info.get("ansible_kernel", "")
         }
 
     def parse_cpu(self):
-        processors = self._get_cpu_info(self._host_info["ansible_processor"])
-        return {
-            "cpu_info": ",".join(processors),
-            "cpu_cores": self._host_info["ansible_processor_vcpus"]
-        }
+        try:
+            processors = self._get_cpu_info(self._host_info["ansible_processor"])
+            cpu_cores = self._host_info.get("ansible_processor_vcpus")
+            cpu_info_str = ",".join(processors) if processors else None
+            return {
+                "cpu_info": cpu_info_str,
+                "cpu_cores": cpu_cores
+            }
+        except KeyError as e:
+            logging.error(f"Missing CPU field in ansible_facts: {e}")
+            return {
+                "cpu_info": None,
+                "cpu_cores": None
+            }
+        except Exception as e:
+            logging.error(f"Error parsing CPU info: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
+            return {
+                "cpu_info": None,
+                "cpu_cores": None
+            }
 
     def _get_cpu_info(self, processor_info):
         """Get cpu info, and return unique value
@@ -98,11 +116,33 @@ class LinuxParser(BaseHostParser):
         return list(set(processors))
 
     def parse_memory(self):
-        return {
-            "memory_info": None,
-            "total_mem": int(self._host_info["ansible_memtotal_mb"]) * 1024,
-            "free_mem": int(self._host_info["ansible_memfree_mb"]) * 1024
-        }
+        try:
+            total_mem_mb = self._host_info.get("ansible_memtotal_mb")
+            free_mem_mb = self._host_info.get("ansible_memfree_mb")
+            # Convert MB to bytes: MB * 1024 * 1024
+            total_mem_bytes = int(total_mem_mb) * 1024 * 1024 if total_mem_mb else None
+            free_mem_bytes = int(free_mem_mb) * 1024 * 1024 if free_mem_mb else None
+            return {
+                "memory_info": None,
+                "total_mem": total_mem_bytes,
+                "free_mem": free_mem_bytes
+            }
+        except KeyError as e:
+            logging.error(f"Missing memory field in ansible_facts: {e}")
+            return {
+                "memory_info": None,
+                "total_mem": None,
+                "free_mem": None
+            }
+        except Exception as e:
+            logging.error(f"Error parsing memory info: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
+            return {
+                "memory_info": None,
+                "total_mem": None,
+                "free_mem": None
+            }
 
     def parse_disks(self):
         """Parse ansible returns disk information

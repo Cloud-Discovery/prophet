@@ -1,278 +1,293 @@
+<p align="center"><a href="https://oneprocloud.com"><img src="./images/prophet-logo.png" alt="Prophet" width="300" /></a></p>
+<h3 align="center">Automated Resource Collection and Analysis Toolset for Cloud Migration and Disaster Recovery</h3>
+
+<p align="center">
+  <a href="https://shields.io/github/downloads/Cloud-Discovery/prophet/total"><img src="https://shields.io/github/downloads/Cloud-Discovery/prophet/total" alt=" release"></a>
+  <a href="https://github.com/Cloud-Discovery/prophet"><img src="https://img.shields.io/github/stars/Cloud-Discovery/prophet?color=%231890FF&style=flat-square" alt="Stars"></a>
+</p>
+
+---
+
+- [中文](../README.md)
+
 ## Table of Contents
 
-* [Project Description](#project-description)
-* [Installation Instructions](#installation-instructions)
-* [Usage Instructions](#usage-instructions)
-* [How to Contribute](#how-to-contribute)
-* [Contributors](#contributors)
-* [License](#license)
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+- [Installation](#installation)
+  - [Docker Compose Deployment (Recommended)](#docker-compose-deployment-recommended)
+  - [Source Code Installation](#source-code-installation)
+- [Usage Guide](#usage-guide)
+  - [Web Interface](#web-interface)
+  - [Command Line Tools](#command-line-tools)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Security Policy](#security-policy)
+- [Contributors](#contributors)
+- [License](#license)
 
-## Project Description
+## Project Overview
 
-Prophet is a toolset for automated data collection and analysis. Currently, it supports the collection and analysis of physical machines and VMware environments, with future plans to expand to various resources in cloud platforms, storage, networks, and more. Its primary application is in the preliminary technical research phase of cloud migration and cloud disaster recovery. It mainly collects basic information about source hosts, compares technical indicators, and ensures that the surveyed source hosts can be correctly migrated or backed up. Additionally, it predicts data transfer times based on data volume. The project has been validated in multiple real-world cloud migration and disaster recovery projects and can be used with confidence.
+Prophet is an automated resource collection, analysis, and management toolset designed for cloud migration and disaster recovery technical research. The project provides a modern web interface and powerful command-line tools, supporting comprehensive collection and analysis of physical machines and VMware environments, helping users quickly understand source infrastructure conditions and ensure the feasibility of migration and disaster recovery plans.
 
-The future vision of this project is to provide an all-in-one research platform, including but not limited to various cloud platform resource usage, file storage, object storage, container platforms, big data platforms, middleware, databases, and more. It will also provide a blueprint drawing board to facilitate solution development in the early stages of projects, reducing the lengthy research period for cloud migration and disaster recovery.
+### Core Value
 
-Currently, Prophet consists of the following key functionalities:
+- **Automated Collection**: Automatically collect detailed host information through multiple protocols (nmap, Ansible, WMI, VMware API)
+- **Visual Analysis**: Provide an intuitive web interface with application topology visualization and management
+- **Data Desensitization**: Automatically remove sensitive information to ensure data security
+- **Containerized Deployment**: One-click deployment, ready to use, reducing environment dependencies
 
-- Scanning all live hosts on the network using the `nmap` command and analyzing basic information about hosts through packet inspection.
-- (Stable) Collecting detailed information about hosts, including computing, storage, and network details related to host migration, through the VMware API interface.
-- (Stable) Retrieving detailed information about Linux hosts, including computing, storage, and network details, through Ansible.
-- (Stable) Collecting detailed information about Windows hosts, including computing, storage, and network details, through the Windows WMI interface.
-- (Stable) Packaging and compressing the collected results in YAML format, with desensitization applied to remove user-related information.
-- (Stable) Analyzing the collected results to derive final conclusions from the technical research.
+### Use Cases
 
-## Installation Instructions
+- Pre-migration research: Comprehensive understanding of source infrastructure to develop migration plans
+- Disaster recovery planning: Assess disaster recovery feasibility and predict data transfer time
+- Infrastructure management: Unified management of hosts, applications, and dependencies
+- Technical documentation generation: Automatically generate technical research reports
 
-Recommend using Prophet in containerized environments to reduce dependency on specific setups.
+## Key Features
 
-### Container
+### Web Interface Features
 
-Currently, the project undergoes automatic build and is pushed to the national container registry after each commit, making it directly usable. First, ensure that the local runtime environment has Docker installed.
+- **Host Management**: View, search, and manage collected host information
+- **Application Management**: Create applications and organize business topology and host dependencies through visual canvas
+- **Scan Tasks**: Create and manage network scan tasks to discover hosts in batches
+- **Virtualization Platforms**: Manage VMware platforms and virtual machine information
+- **Tag Management**: Add tags to hosts for easy classification
+- **Data Import/Export**: Support batch import of host data and export of collection results
 
-* Download prophet Container Image
+### Command Line Features
 
-  ```
-  docker pull \
-    registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
-  ```
+- **Network Scanning**: Scan active hosts in network segments using nmap
+- **Detailed Information Collection**:
+  - Collect virtual machine and ESXi host information via VMware API
+  - Collect detailed Linux host information via Ansible
+  - Collect Windows host information via Windows WMI interface
+- **Data Analysis**: Analyze collection results and generate technical research reports
+- **Data Packaging**: Package and compress collection results with automatic desensitization
 
-* Run Service in Container
+## Installation
 
-  ```
-  docker run \
-    -d \
-    -ti \
-    --name prophet \
-    registry.cn-beijing.aliyuncs.com/oneprocloud-opensource/cloud-discovery-prophet:latest
-  ```
+### Docker Compose Deployment (Recommended)
 
-* Access prophet Container
-
-  ```
-  docker exec -ti prophet bash
-
-  prophet-cli {scan,collect,report}
-  ```
-
-
-### Source Installation
+We recommend using Docker Compose for deployment, which is simple, fast, and requires no complex environment configuration.
 
 #### Prerequisites
 
-* Python Environment
+- Docker >= 20.10
+- Docker Compose >= 2.0
 
-  python3+, python3 pbr should be installed
+#### Quick Start
 
-* Dependencies Installation
+1. **Clone the repository**
 
-  * RHEL & CentOS
+```bash
+git clone https://github.com/Cloud-Discovery/prophet
+cd prophet
+```
 
-    ```
+2. **Configure environment variables (optional)**
+
+Copy the environment variable example file and modify it:
+
+```bash
+cp env.example .env
+```
+
+Edit the `.env` file and set necessary keys:
+
+```bash
+# Required security keys (must be changed)
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-key-here
+ENCRYPTION_KEY=your-encryption-key-here
+```
+
+3. **Start services**
+
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Check service status
+docker-compose ps
+```
+
+4. **Access the application**
+
+- **Web Interface**: http://localhost
+- **API Health Check**: http://localhost:5000/api/v1/health
+
+#### Service Description
+
+- **backend**: Backend service container (port 5000)
+  - Flask REST API
+  - Celery Worker (async task processing)
+  - Redis (message queue and cache)
+- **frontend**: Frontend service container (port 80)
+  - Nginx static file service
+  - Automatic API request proxying
+
+#### Data Persistence
+
+The following directories are mounted as volumes for data persistence:
+
+- `./data`: Database files
+- `./logs`: Log files
+- `./uploads`: Uploaded files
+
+#### Common Commands
+
+```bash
+# Stop services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# View backend logs
+docker-compose logs -f backend
+
+# Enter backend container
+docker-compose exec backend bash
+
+# Enter frontend container
+docker-compose exec frontend sh
+```
+
+For more details, please refer to the [Docker Deployment Documentation](../docker/README.md).
+
+### Source Code Installation
+
+#### Prerequisites
+
+- **Python Environment**: Python 3.8 or higher
+- **System Dependencies** (RHEL & CentOS):
+  ```bash
     yum install -y epel-release
-    cd prophet/
-    yum install -y nmap sshpass
+  yum install -y nmap sshpass python3 python3-pip python3-devel
       ```
 
-#### Source Download and Installation
+#### Installation Steps
 
-```
+```bash
+# Clone the repository
 git clone https://github.com/Cloud-Discovery/prophet
-
 cd prophet
-virtualenv venv
-source venv/bin/activate
 
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate  # Windows
+
+# Install dependencies
 pip install -U pip
 pip install -r requirements.txt
 pip install .
 
-# Install wmi for Windows Remote running
+# Install Windows WMI module (RHEL/CentOS only)
 yum install -y ./tools/wmi-1.3.14-4.el7.art.x86_64.rpm
+
+# Initialize database
+python -c "from app import create_app; from db import init_db; app = create_app(); init_db(app)"
+
+# Start web service
+python app.py
+
+# Start Celery Worker (in another terminal)
+celery -A celery_worker.celery worker --loglevel=info
 ```
 
-## Usage Instructions
+## Usage Guide
 
-### Basic Usage Process
+### Web Interface
 
-1. Scan the specified IP address range.
-2. In the CSV file of the scan results, provide authentication information for the hosts you want to retrieve details for.
-3. Perform batch collection.
-4. Analyze and obtain results.
+#### 1. Login
 
-### (Stable) Function 1: Scan All Running Instances on the Network
+First-time users need to register an account, then log in with username and password.
 
-#### Function Description
+#### 2. Host Management
 
-Discover live hosts within a specific network segment through network scanning and record the findings. This information can be used as input for more detailed information collection in subsequent steps. After the scan is complete, a `scan_results.csv` file will be automatically generated at the specified path to store the information.
+- **View host list**: View all collected hosts on the "Hosts" page
+- **Search and filter**: Support searching by IP, hostname, OS type, etc.
+- **View details**: Click on a host to view detailed information (CPU, memory, disk, network, etc.)
+- **Add tags**: Add tags to hosts for easy classification
 
-**Note: To prevent significant pressure on the production environment, the scan is performed in a single-process mode, resulting in a slower scanning progress. It has been estimated that scanning a subnet with a mask of 24 requires approximately 30 minutes.**
+#### 3. Application Management
 
+Application management provides a visual canvas for organizing dependencies between hosts in business scenarios.
 
-```
-usage: prophet-cli scan [-h] --host HOST [--arg ARG] --output-path OUTPUT_PATH
-                        [--report-name REPORT_NAME]
+**Create Application**:
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --host HOST           Input host, example: 192.168.10.0/24, 192.168.10.1-2
-  --arg ARG             Arguments for nmap, for more detailed, please check
-                        nmap document
-  --output-path OUTPUT_PATH
-                        Generate initial host report path
-  --report-name REPORT_NAME
-                        Scan report csv name
-```
+1. Click the "Create Application" button
+2. Enter application name and description
+3. Enter the application detail page
 
-#### Example 1: Obtain Subnet Hosts
+**Visual Canvas Operations**:
 
-Scan all live hosts in the 192.168.10.0/24 subnet and generate a CSV file in the /tmp directory.
+1. **Resource Panel** (left side)
+   - Search and add hosts not yet in the application
+   - Use template nodes (network, storage, service, etc.) to supplement business architecture
+2. **Canvas Operations** (center)
+   - Drag nodes to move positions
+   - Connect two nodes to create relationships
+   - Use toolbar to adjust layout (grid, horizontal, vertical)
+   - Zoom and view reset
+3. **Property Panel** (right side)
+   - Select nodes or connections to view/edit properties
+   - Modify relationship types and descriptions
+   - Rebind hosts
 
+**Line Style Settings**:
 
-```
-prophet-cli scan --host 192.168.10.0/24 --output-path /tmp/
-```
+- Click on a connection in the canvas, then click "Line Style" in the top toolbar
+- Set line type (polyline, straight line, bezier curve)
+- Set line style (solid, dashed, dotted)
+- Set line width and color
 
-#### Example 2: Obtain Hosts in a Specified IP Range
+#### 4. Scan Tasks
 
-Scan all live hosts in the range 192.168.10.2 to 192.168.10.50 and generate a CSV file in the /tmp directory.
+- **Create scan task**: Create network scan tasks on the "Scans" page
+- **View task status**: View scan progress and results in real-time
+- **Download scan results**: Download CSV format result files after scanning
 
-```
-prophet-cli scan --host 192.168.10.2-50 --output-path /tmp/
-```
+#### 5. Data Import
 
-#### CSV Structure Explanation
+- Batch import host data on the "Collections" page
+- Support CSV and YAML formats
 
-| Field Name   | Field Description                                               |
-|--------------|-------------------------------------------------------------|
-| hostname     | Hostname, can be empty                                          |
-| ip           | User IP address, mandatory                                      |
-| username     | Username; for VMware, it is the username for ESXi or vCenter     |
-| password     | Password; for VMware, it is the password for ESXi or vCenter     |
-| ssh_port     | For Linux, this field represents the SSH port; for VMware ESXi or vCenter, it is the connection port, defaulting to 443; for Windows, it is empty by default |
-| key_path     | If using key-based login, specify the absolute path to the key; otherwise, it is empty |
-| mac          | Host MAC address, can be empty                                   |
-| vendor       | Vendor, can be empty; if it is a virtual machine running on VMware, it will be VMware |
-| check_status | Whether detailed information collection is needed; set to "check" if required, otherwise, the tool will automatically skip |
-| os           | Operating system type; currently supported types are: Linux/Windows/VMware; case-sensitive |
-| version      | Operating system version, can be empty                           |
-| tcp_ports    | Open external ports, can be empty                                 |
-| do_status    | Detailed information collection status, indicating whether collection is complete or failed; default is empty                         |
+## Project Structure
 
-### (Stable) Function 2: Detailed Information Collection
+For detailed project structure, please refer to [PROJECT_STRUCTURE.md](../PROJECT_STRUCTURE.md).
 
-#### Function Description
+Main directories:
 
-After users input authentication information into the template, further detailed scanning is performed.
+- `api/` - Flask API endpoints
+- `frontend/` - Vue.js frontend application
+- `models/` - Database models
+- `prophet/` - Core library (collection, parsing, scanning, etc.)
+- `services/` - Business logic services
+- `tasks/` - Celery async tasks
+- `docker/` - Docker deployment configuration
 
-Note:
+## Contributing
 
-* For hosts to be scanned, set the `check_status` to "check"; otherwise, no check will be performed.
-* For VMware virtual machines, scanning will only be done through the associated ESXi host.
-* For Windows hosts, scanning requires the Administrator user.
-* Successfully collected hosts will not undergo collection again upon subsequent script runs unless the user specifies the `force-check` parameter.
-* Hosts that fail in collection will be reattempted in the next collection.
-* In the final generated compressed package, all sensitive information related to user authentication has been removed.
-* (Stable) The VMware collection part is currently stable.
-* (Testing) The Linux and Windows collection parts are still in testing.
+We welcome all forms of contributions! Please check [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed contribution guidelines.
 
-```
-usage: prophet-cli collect [-h] --host-file HOST_FILE --output-path
-                           OUTPUT_PATH [-f] [--package-name PACKAGE_NAME]
+## Security Policy
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --host-file HOST_FILE
-                        Host file which generated by network scan
-  --output-path OUTPUT_PATH
-                        Output path for batch collection
-  -f, --force-check     Force check all hosts
-  --package-name PACKAGE_NAME
-                        Prefix name for host collection package
-```
-
-#### Example: Execute Collection
-
-First, update the authentication information for the hosts to be collected in the generated `scan_results.csv`. The project's examples directory includes a [sample scan_results.csv](https://github.com/Cloud-Discovery/prophet/blob/master/examples/scan_results.csv).
-
-
-|hostname|ip            |username                   |password             |ssh_port|key_path|mac              |vendor|check_status|os     |version                                   |tcp_ports                                                                            |do_status|
-|--------|--------------|---------------------------|---------------------|--------|--------|-----------------|------|------------|-------|------------------------------------------|-------------------------------------------------------------------------------------|---------|
-|        |192.168.10.2  |administrator@vsphere.local|your_vcenter_password|        |        |00:50:56:9f:03:f0|      |check       |Windows|Microsoft Windows 7 or Windows Server 2012|80,88,135,139,389,443,445,514,636,2020,3389,8088,9009,9090                           |         |
-|        |192.168.10.6  |root                       |your_esxi_password   |443     |        |0c:c4:7a:e5:5d:20|      |check       |VMware |VMware ESXi Server 4.1                    |22,80,427,443,902,5988,5989,8000,8080,8100,8300                                      |         |
-|        |192.168.10.185|Administrator              |your_windows_password|        |        |00:50:56:9a:6d:2e|      |check       |Windows|Microsoft Windows Server 2003 SP1 or SP2  |135,139,445,1028,3389                                                                |         |
-|        |192.168.10.201|root                       |your_linux_password  |22      |        |ac:1f:6b:27:7f:e4|      |check       |Linux  |Linux 2.6.32 - 3.9                        |22,80,3306,4567,5000,5900,5901,5902,5903,5904,5906,5907,5910,5911,5915,8022,8080,9100|         |
-
-
-```
-prophet-cli collect --host-file /tmp/scan_hosts.csv --output-path /tmp
-```
-
-#### Collection Result Explanation
-
-Collection Directory Structure
-
-```
-hosts_collection
-|-- LINUX -> Linux Host Collection Information
-|-- VMWARE -> VMWare Host Collection Information
-|-- WINDOWS -> Windows Host Collection Information
-|-- prophet.log -> Log during the collection process, useful for analyzing unknown scenarios
-|-- scan_hosts.csv -> File containing information on collected hosts, including open port details
-```
-
-Additionally, a `hosts_collection_xxxxxxx.zip` file will be generated in the output directory. This file is the final compressed file used for analysis.
-
-### (Under Refactoring) Function 3: Analyze and Generate Reports
-
-#### Function Description
-
-Analyze the collected results and generate the final migration report. This section can be expanded based on specific requirements.
-
-```
-usage: prophet-cli report [-h] --package-file PACKAGE_FILE --output-path
-                          OUTPUT_PATH [--report-name REPORT_NAME] [--clean]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --package-file PACKAGE_FILE
-                        Investigate package file which is genreated by
-                        prophet-collect
-  --output-path OUTPUT_PATH
-                        Generate report path
-  --report-name REPORT_NAME
-                        Generate report name
-  --clean               Clean temp work dir or not, by default is not
-```
-
-#### Example: Analyze and Generate Report
-
-```
-prophet-cli -d -v report --package-file /tmp/hosts_collection_20211215202459.zip --output-path /tmp
-```
-
-#### Example: Analyze Report
-
-| Platform Type | Hostname | VMware Hostname | IP | Mac | Operating System Type | Operating System Version | Operating System Bit | Operating System Kernel Version | Boot Method | CPU | CPU Cores | Memory | Total Memory (GB) | Free Memory (GB) | Disk Count | Total Disk Capacity (GB) | Disk Information | Partition Information | Network Card Count | Network Card Information | Virtualization Type | Virtualization Version | ESXi Server |
-|--------|---------------------|---------|------------------------|-----------------|----------------------------------|----------------------------------|------|---------------------|----|-----------------------------------------|-----|---------------|--------|--------|----|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|----|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-------------------------------|---------------------|
-|Physical|compute201           |         |192.168.10.201          |ac:1f:6b:27:7f:e4|CentOS                            |7.5.1804                          |x86_64|3.10.0-862.el7.x86_64|bios|Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz|40   |               |62.65   |5.35    |7   |5467004.78 |sda&#124;56266.78&#124;ATA&#124;SuperMicro SSD sdb&#124;213212.97&#124;ATA&#124;INTEL SSDSC2BB24 sdc&#124;1039505.00&#124;SEAGATE&#124;ST1200MM0007 sdd&#124;1039505.00&#124;SEAGATE&#124;ST1200MM0007 sde&#124;1039505.00&#124;SEAGATE&#124;ST1200MM0007 sdf&#124;1039505.00&#124;TOSHIBA&#124;AL15SEB120NY sdg&#124;1039505.00&#124;TOSHIBA&#124;AL15SEB120NY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |/dev/sda2&#124;62245572608&#124;58963365888&#124;0.95&#124;xfs /dev/sda1&#124;1063256064&#124;922746880&#124;0.87&#124;xfs /dev/sdc1&#124;1199655976960&#124;1141407465472&#124;0.95&#124;xfs|4   |eno1&#124;0c:c4:7a:a5:29:3a&#124;True&#124;1500&#124;10000&#124;10.0.100.201&#124;255.255.255.0&#124;10.0.100.0&#124;10.0.100.255&#124;fe80::ec4:7aff:fea5:293a ens2f3&#124;ac:1f:6b:27:7f:e7&#124;True&#124;1500&#124;1000&#124;None&#124;None&#124;None&#124;None&#124;fe80::ae1f:6bff:fe27:7fe7 ens2f0&#124;ac:1f:6b:27:7f:e4&#124;True&#124;1500&#124;1000&#124;192.168.10.201&#124;255.255.255.0&#124;192.168.10.0&#124;192.168.10.255&#124;192.168.10.1&#124;fe80::ae1f:6bff:fe27:7fe4 ens2f1&#124;ac:1f:6b:27:7f:e5&#124;True&#124;1500&#124;1000&#124;172.16.100.201&#124;255.255.255.0&#124;172.16.100.0&#124;172.16.100.255&#124;fe80::ae1f:6bff:fe27:7fe5|                 |                               |                     |
-|Physical|compute202           |         |192.168.10.202          |0c:c4:7a:e5:5c:f8|CentOS                            |7.5.1804                          |x86_64|3.10.0-862.el7.x86_64|bios|Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz|40   |               |62.65   |13.27   |7   |5467004.78 |sda&#124;56266.78&#124;ATA&#124;SuperMicro SSD sdb&#124;213212.97&#124;ATA&#124;INTEL SSDSC2BB24 sdc&#124;1039505.00&#124;SEAGATE&#124;ST1200MM0007 sdd&#124;1039505.00&#124;SEAGATE&#124;ST1200MM0007 sde&#124;1039505.00&#124;SEAGATE&#124;ST1200MM0007 sdf&#124;1039505.00&#124;TOSHIBA&#124;AL15SEB120NY sdg&#124;1039505.00&#124;TOSHIBA&#124;AL15SEB120NY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |/dev/sda2&#124;62245572608&#124;52926242816&#124;0.85&#124;xfs /dev/sda1&#124;1063256064&#124;922746880&#124;0.87&#124;xfs                                               |4   |eno1&#124;0c:c4:7a:a5:2e:d0&#124;True&#124;1500&#124;10000&#124;10.0.100.202&#124;255.255.255.0&#124;10.0.100.0&#124;10.0.100.255&#124;fe80::ec4:7aff:fea5:2ed0 ens2f3&#124;0c:c4:7a:e5:5c:fb&#124;True&#124;1500&#124;1000&#124;None&#124;None&#124;None&#124;None&#124;fe80::ec4:7aff:fee5:5cfb ens2f0&#124;0c:c4:7a:e5:5c:f8&#124;True&#124;1500&#124;1000&#124;192.168.10.202&#124;255.255.255.0&#124;192.168.10.0&#124;192.168.10.255&#124;192.168.10.1&#124;fe80::ec4:7aff:fee5:5cf8 ens2f1&#124;0c:c4:7a:e5:5c:f9&#124;True&#124;1500&#124;1000&#124;172.16.100.202&#124;255.255.255.0&#124;172.16.100.0&#124;172.16.100.255&#124;fe80::ec4:7aff:fee5:5cf9   |                 |                               |                     |
-|VMware  |node01               |         |                        |00:50:56:9a:49:b7|CentOS 4/5/6/7                    |CentOS 4/5/6/7                    |64-bit|                     |efi |Intel(R) Xeon(R) CPU E5-2680 0 @ 2.70GHz |4    |               |8192.00 |        |1   |51200.00   |[10.3-4T-5] centos7.4_node_139/centos7.4_node_139.vmdk&#124;51200.00                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |                                                                                                                                 |1   |VM Network&#124;00:50:56:9a:49:b7                                                                                                                                                                                                                                                                                                                                                                                                                                               |VMware ESX Server|VMware ESXi 6.0.0 build-2715440|192.168.10.3         |
-|VMware  |master03             |         |                        |00:50:56:9a:63:a0|CentOS 4/5/6/7                    |CentOS 4/5/6/7                    |64-bit|                     |efi |Intel(R) Xeon(R) CPU E5-2680 0 @ 2.70GHz |4    |               |4096.00 |        |1   |51200.00   |[10.3-4T-5] centos7.2_132/centos7.2_132.vmdk&#124;51200.00                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |                                                                                                                                 |1   |VM Network&#124;00:50:56:9a:63:a0                                                                                                                                                                                                                                                                                                                                                                                                                                               |VMware ESX Server|VMware ESXi 6.0.0 build-2715440|192.168.10.3         |
-|VMware  |master02             |         |                        |00:50:56:9a:06:ad|CentOS 4/5/6/7                    |CentOS 4/5/6/7                    |64-bit|                     |efi |Intel(R) Xeon(R) CPU E5-2680 0 @ 2.70GHz |4    |               |4096.00 |        |1   |51200.00   |[10.3-4T-5] centos7.3_131/centos7.3_131.vmdk&#124;51200.00                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |                                                                                                                                 |1   |VM Network&#124;00:50:56:9a:06:ad                                                                                                                                                                                                                                                                                                                                                                                                                                               |VMware ESX Server|VMware ESXi 6.0.0 build-2715440|192.168.10.3         |
-|Physical|COMPUTER-PC          |         |192.168.10.62           |00:0c:29:9a:59:73|Microsoft Windows 7 旗舰版           |Microsoft Windows 7 旗舰版           |64-bit|6.1.7600             |bios|Intel(R) Xeon(R) CPU E5-2680 0 @ 2.70GHz |4    |Physical Memory|8191.55 |4.83    |2   |255996.72  |0&#124;51199.34&#124;VMware Virtual disk SCSI Disk Device&#124;VMware Virtual disk SCSI Disk Device 1&#124;204797.37&#124;VMware Virtual disk SCSI Disk Device&#124;VMware Virtual disk SCSI Disk Device                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |C:&#124;53580132352&#124;4455071744&#124;0.08&#124;NTFS D:&#124;109887614976&#124;109790175232&#124;1.0&#124;NTFS E:&#124;104857595904&#124;104760311808&#124;1.0&#124;NTFS                  |1   |[00000007] Intel(R) PRO/1000 MT Network Connection&#124;00:0c:29:9a:59:73&#124;192.168.10.1&#124;192.168.10.62&#124;255.255.255.0                                                                                                                                                                                                                                                                                                                                                              |                 |                               |                     |
-
-## How to Contribute
-
-TODO: Developer documentation to be completed
+If you discover a security vulnerability, please see [SECURITY.md](../SECURITY.md) for how to report it.
 
 ## License
 
-This project is licensed under the [Mulan Public License, Version 2.0](http://license.coscl.org.cn/MulanPubL-2.0)
+This project is licensed under the [Mulan PubL v2](http://license.coscl.org.cn/MulanPubL-2.0)
 
 ## Contributors
 
-Thanks to the contributors who have made contributions to this project.
+Thanks to all contributors who have contributed to this project
 
 <a href="https://github.com/Cloud-Discovery/prophet/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Cloud-Discovery/prophet" />

@@ -1,0 +1,86 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+.pytest_cache
+.coverage
+htmlcov
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+prophet.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+prophet.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node modules (frontend)
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Data
+data/*
+!data/.gitkeep
+
+# Docker
+docker-compose.yml
+Dockerfile
+Dockerfile.*
+.dockerignore
+
+# Documentation
+docs/
+README.md
+*.md
+
+# Tests
+tests/
+test_*.py
+*_test.py
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+

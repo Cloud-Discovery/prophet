@@ -56,7 +56,7 @@ class WindowsCollector(BaseHostCollector):
                         "Running Windows command %s success" % command)
                 collect_infos.update(self._parse_result(stdout))
 
-        # Save to yaml file
+        # Return data directly instead of saving to YAML
         save_values = {
             self.root_key: {
                 "results": collect_infos,
@@ -64,9 +64,11 @@ class WindowsCollector(BaseHostCollector):
                 "tcp_ports": self.tcp_ports
             }
         }
-        self.save_to_yaml(self.collect_path, save_values)
+        
+        # Don't save to YAML file anymore - return data directly
+        # self.save_to_yaml(self.collect_path, save_values)
 
-        return [collect_infos]
+        return save_values
 
     def _parse_result(self, result):
         """Save wmi result in dict

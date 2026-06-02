@@ -11,97 +11,106 @@
 #   MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 #   See the Mulan PubL v2 for more details.
 
-"""Network scanner based on namp
+"""Network scanner based on nmap
 
-Scan network based on ip address, then analysis and generate report for
-future collection
+Scan network based on ip address, then analysis and return results
+for direct database storage
 
 """
 
 import logging
 import nmap
-import os
-
-import pandas as pd
 
 DEFAULT_ARGS = "-sS -O"
-DEFAULT_FILE_NAME = "scan_hosts.csv"
-DEFAULT_HEADERS = ["hostname", "ip", "username", "password", "ssh_port",
-                   "key_path", "mac", "vendor", "check_status", "os",
-                   "version", "tcp_ports", "do_status"]
-DEFAULT_HOSTNAME = ""
-DEFAULT_IP = ""
 DEFAULT_LINUX_USER = "root"
 DEFAULT_WINDOWS_USER = "Administrator"
 DEFAULT_USER = "enter_your_username"
-DEFAULT_PASSWORD = ""
-DEFAULT_PORT = ""
 DEFAULT_LINUX_PORT = "22"
 DEFAULT_VMWARE_PORT = "443"
-DEFAULT_KEY_PATH = ""
-DEFAULT_MAC = ""
-DEFAULT_VENDOR = ""
-DEFAULT_CHECKSTATUS = ""
-DEFAULT_OS = ""
-DEFAULT_VERSION = ""
-DEFAULT_DO_STATUS = ""
 CHECKSTATUS_CHECK = "check"
 
 
 class NetworkController(object):
 
-    def __init__(self, host, arg, report_storage_path):
+    def __init__(self, host, arg):
+        """Initialize network scanner
+        
+        Args:
+            host: IP address, IP range, or CIDR notation to scan
+            arg: nmap arguments (default: "-sS -O")
+        """
         self.host = host
         self.arg = arg if arg else DEFAULT_ARGS
-        self.report_storage_path = report_storage_path
         self.nm = nmap.PortScanner()
 
-    def generate_report(self):
-        report_path = os.path.abspath(
-            os.path.join(self.report_storage_path,
-                         DEFAULT_FILE_NAME)
-        )
-        #writer = csv.DictWriter(csvfile, fieldnames=DEFAULT_HEADERS)
-        #writer.writeheader()
-        hosts = self._scan()
-        data = []
-        for host in hosts:
+    def scan(self):
+        """Scan network and return results as a generator
+        
+        Note: _scan() must be called first to perform the actual nmap scan.
+        This method processes the already-scanned results.
+        
+        Yields:
+            dict: Host scan result with keys:
+                - ip: IP address
+                - hostname: Hostname
+                - mac: MAC address
+                - vendor: Vendor information
+                - os: Operating system family
+                - os_version: OS version
+                - ports: Dict with 'tcp' and 'udp' keys containing port lists
+                - ssh_port: Suggested SSH port
+                - username: Suggested username
+        """
+        # Get hosts from already-performed scan
+        hosts = self.nm.all_hosts()
+        if not hosts:
+            # If no hosts, perform scan now
+            hosts = self._scan()
+        total = len(hosts)
+        
+        for idx, host_ip in enumerate(hosts):
             try:
-                logging.info("Analysis %s..." % host)
-                host_info = self.nm[host]
-                logging.debug("Host info %s" % host_info)
+                logging.info(f"Analyzing {host_ip} ({idx + 1}/{total})...")
+                host_info = self.nm[host_ip]
+                logging.debug(f"Host info: {host_info}")
+                
                 hostname = host_info.hostname()
                 mac = self._get_mac(host_info.get("addresses"))
                 osfamily, version = self._get_os(host_info.get("osmatch"))
                 vendor = self._get_vendor(host_info.get("vendor"), mac)
                 ssh_port = self._get_ssh_port(osfamily)
-                all_tcp = ",".join(
-                    [str(x) for x in self.nm[host].all_tcp()])
                 username = self._get_username(osfamily)
-                check = self._get_check_status(vendor, osfamily)
-                row_data = {
-                    "hostname": hostname,
-                    "ip": host,
-                    "username": username,
-                    "password": DEFAULT_PASSWORD,
-                    "ssh_port": ssh_port,
-                    "key_path": DEFAULT_KEY_PATH,
-                    "mac": mac,
-                    "vendor": vendor,
-                    "check_status": check,
-                    "os": osfamily,
-                    "version": version,
-                    "tcp_ports": all_tcp,
-                    "do_status": DEFAULT_DO_STATUS
+                
+                # Get TCP and UDP ports
+                tcp_ports = list(self.nm[host_ip].all_tcp())
+                udp_ports = list(self.nm[host_ip].all_udp())
+                
+                # Get detailed port information
+                ports_info = {
+                    'tcp': tcp_ports,
+                    'udp': udp_ports,
                 }
-                logging.debug("Writing row %s" % row_data)
-                #writer.writerow(row_data)
-                data.append(row_data)
+                
+                result = {
+                    "ip": host_ip,
+                    "hostname": hostname or None,
+                    "mac": mac or None,
+                    "vendor": vendor or None,
+                    "os": osfamily or None,
+                    "os_version": version or None,
+                    "ports": ports_info,
+                    "tcp_ports": tcp_ports,  # Keep for backward compatibility
+                    "ssh_port": ssh_port,
+                    "username": username,
+                }
+                
+                logging.debug(f"Scan result for {host_ip}: {result}")
+                yield result
+                
             except Exception as e:
-                logging.exception(e)
-                logging.warn("Analysis host %s failed." % host)
-        hosts_pd = pd.DataFrame(data, columns=DEFAULT_HEADERS)
-        hosts_pd.to_csv(report_path, index=False)
+                logging.exception(f"Analysis of host {host_ip} failed: {e}")
+                logging.warning(f"Skipping host {host_ip} due to error")
+                continue
 
     def _scan(self):
         logging.info("Begin scaning %s..." % self.host)
@@ -116,11 +125,13 @@ class NetworkController(object):
             return mac
 
     def _get_vendor(self, vendor, mac):
-        if vendor:
+        if vendor and mac:
             return vendor.get(mac)
-        return ""
+        return None
 
     def _get_username(self, osfamily):
+        if not osfamily:
+            return DEFAULT_USER
         if "linux" in osfamily.lower():
             return DEFAULT_LINUX_USER
         if "windows" in osfamily.lower():
@@ -128,19 +139,24 @@ class NetworkController(object):
         return DEFAULT_USER
 
     def _get_ssh_port(self, osfamily):
+        if not osfamily:
+            return None
         if "linux" in osfamily.lower():
-            return DEFAULT_LINUX_PORT
+            return int(DEFAULT_LINUX_PORT)
         if "vmware" in osfamily.lower():
-            return DEFAULT_VMWARE_PORT
-        return DEFAULT_PORT
+            return int(DEFAULT_VMWARE_PORT)
+        return None
 
     def _get_check_status(self, vendor, osfamily):
+        """Get check status (not used in new implementation, kept for compatibility)"""
+        if not osfamily:
+            return ""
         if vendor and vendor.lower() != "vmware":
             if osfamily.lower() == "linux" \
                or osfamily.lower() == "windows" \
                or osfamily.lower() == "vmware":
                 return CHECKSTATUS_CHECK
-        return DEFAULT_CHECKSTATUS
+        return ""
 
     def _get_os(self, osmatch):
         osfamily = ""

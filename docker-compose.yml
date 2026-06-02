@@ -1,0 +1,57 @@
+services:
+  # 后端服务（包含 Flask、Celery、Redis）
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: prophet-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-${SECRET_KEY:-change-this-secret-key-in-production}}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/prophet.db}
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/0
+      - REDIS_HOST=localhost
+      - REDIS_PORT=6379
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - prophet-network
+
+  # 前端服务
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: prophet-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - prophet-network
+
+networks:
+  prophet-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:
+  uploads:

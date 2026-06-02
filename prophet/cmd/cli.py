@@ -46,8 +46,40 @@ def scan_network(args):
         logging.info("Cannot found %s directory in system, "
                      "create it." % output_path)
         os.makedirs(output_path)
-    network = NetworkController(host, arg, output_path)
-    network.generate_report()
+    
+    # Use new scan() method and write to CSV for CLI compatibility
+    import csv
+    import pandas as pd
+    network = NetworkController(host, arg)
+    results = []
+    
+    for result in network.scan():
+        # Convert to CSV format for backward compatibility
+        csv_row = {
+            "hostname": result.get("hostname", ""),
+            "ip": result.get("ip", ""),
+            "username": result.get("username", ""),
+            "password": "",
+            "ssh_port": result.get("ssh_port", ""),
+            "key_path": "",
+            "mac": result.get("mac", ""),
+            "vendor": result.get("vendor", ""),
+            "check_status": "",
+            "os": result.get("os", ""),
+            "version": result.get("os_version", ""),
+            "tcp_ports": ",".join([str(p) for p in result.get("tcp_ports", [])]),
+            "do_status": ""
+        }
+        results.append(csv_row)
+    
+    # Write to CSV file
+    csv_path = os.path.join(output_path, args.report_name)
+    if results:
+        df = pd.DataFrame(results)
+        df.to_csv(csv_path, index=False)
+        logging.info(f"Scan completed. Results saved to {csv_path}")
+    else:
+        logging.warning("No hosts found during scan")
 
 
 def collect_hosts(args):

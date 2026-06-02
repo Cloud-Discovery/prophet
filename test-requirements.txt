@@ -1,5 +1,0 @@
-coverage
-flake8
-mock
-nose
-testtools>=2.2.0

@@ -82,13 +82,14 @@ class WindowsParser(BaseHostParser):
         }
 
     def parse_os(self):
-        os = self._operating_system["Name"].split("|")[0].strip()
-        os_bit = self._operating_system["OSArchitecture"]
-        os_kernel = self._operating_system["Version"]
+        os_name = self._operating_system["Name"].split("|")[0].strip()
+        os_bit = self._operating_system.get("OSArchitecture", "")
+        os_kernel = self._operating_system.get("Version", "")
 
         return {
-            "os": os,
-            "os_version": os,
+            "os": "Windows",
+            "distribution": None,
+            "os_version": os_name,
             "os_bit": os_bit,
             "os_kernel": os_kernel
         }

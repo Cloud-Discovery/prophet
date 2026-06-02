@@ -74,24 +74,27 @@ class VMwareParser(BaseHostParser):
 
         Sample data:
         guestFullName: Other Linux (64-bit)
+        guestFullName: Ubuntu Linux (64-bit)
+        guestFullName: Microsoft Windows Server 2019 (64-bit)
         """
-        os_name = self._host_info["guestFullName"]
+        os_name = self._host_info.get("guestFullName", "")
 
-        os = None
+        distribution = None
         os_bit = None
         matchObj = re.match(r"(.*)\s+\((.*)\)", os_name)
         if matchObj:
-            os = matchObj.group(1)
+            distribution = matchObj.group(1).strip()
             os_bit = matchObj.group(2)
 
-        if "64" in os_bit:
+        if os_bit and "64" in os_bit:
             os_bit = "64-bit"
-        else:
+        elif os_bit:
             os_bit = "32-bit"
 
         return {
-            "os": os,
-            "os_version": os,
+            "os": "VM",
+            "distribution": distribution,
+            "os_version": distribution,
             "os_bit": os_bit
         }
 
